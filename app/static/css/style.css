@@ -40,8 +40,8 @@
 
 body {
     font-family: var(--font-primary);
-    background-color: var(--fml-off-white);
-    color: var(--fml-black);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
     font-size: 15px;
     line-height: 1.6;
 }
@@ -49,7 +49,7 @@ body {
 /* ============ TYPOGRAPHY ============ */
 h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
-    color: var(--fml-black);
+    color: var(--bs-heading-color);
 }
 
 .fml-title {
@@ -143,19 +143,20 @@ a:hover {
 /* ============ SIDEBAR ============ */
 .sidebar {
     position: fixed;
-    top: 70px;
+    top: 0;
     bottom: 0;
+    height: 100vh;
     left: 0;
     z-index: 100;
-    padding: 0;
+    padding: 76px 0 0 0;
     box-shadow: 2px 0 10px rgba(0,0,0,0.08);
     overflow-y: auto;
-    background-color: #ffffff !important;
+    background-color: var(--bs-body-bg);
     border-right: 1px solid var(--fml-border);
 }
 
 .sidebar .nav-link {
-    color: var(--fml-black) !important;
+    color: var(--bs-body-color) !important;
     padding: 0.75rem 1.5rem;
     border-radius: 0;
     font-weight: 500;
@@ -513,7 +514,7 @@ a:hover {
 }
 
 .section-title {
-    color: var(--fml-black);
+    color: var(--bs-body-color);
     font-weight: 700;
     padding-bottom: 0.75rem;
     border-bottom: 3px solid var(--fml-red);
@@ -782,7 +783,7 @@ a:hover {
 
 .req-doc-number {
     font-size: 0.95rem;
-    color: var(--fml-black);
+    color: var(--bs-body-color);
 }
 
 .req-doc-divider {
@@ -794,7 +795,7 @@ a:hover {
 
 .req-doc-table .req-label {
     font-weight: 700;
-    color: var(--fml-black);
+    color: var(--bs-body-color);
     width: 150px;
     font-size: 0.88rem;
     padding: 0.4rem 0.5rem;
@@ -830,7 +831,7 @@ a:hover {
 }
 
 .req-section-heading {
-    color: var(--fml-black);
+    color: var(--bs-body-color);
     font-weight: 700;
     border-bottom: 3px solid var(--fml-red);
     padding-bottom: 0.6rem;
@@ -856,7 +857,7 @@ a:hover {
 .req-sig-name {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--fml-black);
+    color: var(--bs-body-color);
 }
 
 .req-sig-img {
@@ -896,9 +897,43 @@ a:hover {
 }
 
 
-/* Dark mode overrides for requisition documents */
-[data-bs-theme="dark"] .requisition-document,
-[data-bs-theme="dark"] .requisition-document-wrapper { background-color: var(--bs-body-bg); color: var(--bs-body-color); }
-[data-bs-theme="dark"] .req-reason-box { background-color: #2b3035; }
+/* ============ DARK MODE ============ */
+[data-bs-theme="dark"] body { background-color: #111417; color: #dee2e6; }
+[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2, [data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4, [data-bs-theme="dark"] h5, [data-bs-theme="dark"] h6 { color: #f1f3f5; }
+[data-bs-theme="dark"] .sidebar { background-color: #171a1e; border-right-color: #2c3035; }
+[data-bs-theme="dark"] .sidebar .nav-link { color: #dee2e6 !important; }
+[data-bs-theme="dark"] .sidebar .nav-link:hover { background-color: #22262b; }
+[data-bs-theme="dark"] .sidebar .nav-link.active { background-color: rgba(210,31,60,0.22); color: #ff7b8c !important; }
+[data-bs-theme="dark"] .sidebar-heading, [data-bs-theme="dark"] .sidebar-footer small { color: #adb5bd !important; }
+[data-bs-theme="dark"] .sidebar-footer { border-top-color: #2c3035; }
+[data-bs-theme="dark"] .card { background-color: #1a1d21; color: #dee2e6; }
+[data-bs-theme="dark"] .card-header, [data-bs-theme="dark"] .card-footer { background-color: #1f2328; border-color: #2c3035; }
+[data-bs-theme="dark"] .table { --bs-table-bg: transparent; color: #dee2e6; }
+[data-bs-theme="dark"] .table th { color: #adb5bd; }
+[data-bs-theme="dark"] .table-light, [data-bs-theme="dark"] thead.table-light th { background-color: #22262b; color: #dee2e6; }
+[data-bs-theme="dark"] .table-hover tbody tr:hover { background-color: rgba(210,31,60,0.08); }
+[data-bs-theme="dark"] .dropdown-menu { background-color: #1f2328; }
+[data-bs-theme="dark"] .dropdown-item { color: #dee2e6; }
+[data-bs-theme="dark"] .dropdown-item:hover { background-color: #2c3035; color: #ff7b8c; }
+[data-bs-theme="dark"] .requisition-document, [data-bs-theme="dark"] .requisition-document-wrapper { background-color: #1a1d21; color: #dee2e6; }
+[data-bs-theme="dark"] .req-doc-number, [data-bs-theme="dark"] .req-sig-name, [data-bs-theme="dark"] .req-sig-date,
+[data-bs-theme="dark"] .req-doc-table .req-label, [data-bs-theme="dark"] .req-doc-table .req-value,
+[data-bs-theme="dark"] .req-section-heading, [data-bs-theme="dark"] .section-title { color: #f1f3f5; }
+[data-bs-theme="dark"] .req-sig-role { color: #adb5bd; }
+[data-bs-theme="dark"] .req-reason-box, [data-bs-theme="dark"] .req-signature-block { background-color: #22262b; color: #dee2e6; }
+[data-bs-theme="dark"] .req-totals-row { background-color: #3a1a20; color: #ff7b8c; }
+[data-bs-theme="dark"] .req-sig-placeholder { color: #6c757d; }
+[data-bs-theme="dark"] .req-doc-divider { border-top-color: #d21f3c; }
+[data-bs-theme="dark"] .req-doc-footer { border-top-color: #2c3035; }
+[data-bs-theme="dark"] .req-sig-img { background-color: #ffffff; border-radius: 4px; padding: 2px; }
 [data-bs-theme="dark"] .req-doc-logo { filter: brightness(1.15); }
-[data-bs-theme="dark"] .req-sig-img { background-color: #ffffff; border-radius: 4px; }
+[data-bs-theme="dark"] .alert-info { background-color: #0f2a3a; color: #9fd3f0; }
+[data-bs-theme="dark"] .alert-warning { background-color: #3a2a07; color: #ffd98a; }
+[data-bs-theme="dark"] .alert-success { background-color: #10291a; color: #9fe0b7; }
+[data-bs-theme="dark"] .alert-danger, [data-bs-theme="dark"] .alert-primary { background-color: #3a1219; color: #ffb3bd; }
+[data-bs-theme="dark"] .progress { background-color: #2c3035; }
+[data-bs-theme="dark"] .form-control, [data-bs-theme="dark"] .form-select { background-color: #22262b; border-color: #3a3f45; color: #dee2e6; }
+[data-bs-theme="dark"] .auth-card { background: #1a1d21; color: #dee2e6; }
+[data-bs-theme="dark"] .auth-title, [data-bs-theme="dark"] .auth-footer { color: #dee2e6; }
+[data-bs-theme="dark"] .auth-subtitle { color: #adb5bd; }
