@@ -510,7 +510,7 @@ def reports():
 @login_required
 @active_user_required
 def reports_export(fmt):
-    if fmt not in ('csv', 'xlsx'):
+    if fmt not in ('csv', 'xlsx', 'pdf'):
         flash('Unsupported export format.', 'warning')
         return redirect(url_for('requisition.reports'))
 
@@ -518,6 +518,7 @@ def reports_export(fmt):
     results = _report_query(filters)
 
     from app.utils.reports import to_csv, to_excel, describe_filters
+    from app.utils.pdf_export import to_pdf
     meta = {
         'generated': datetime.utcnow().strftime('%d %b %Y %H:%M UTC'),
         'filters': describe_filters(filters),
@@ -526,10 +527,14 @@ def reports_export(fmt):
         buf = to_csv(results, meta)
         mimetype = 'text/csv'
         ext = 'csv'
-    else:
+    elif fmt == 'xlsx':
         buf = to_excel(results, meta)
         mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ext = 'xlsx'
+    else:
+        buf = to_pdf(results, meta)
+        mimetype = 'application/pdf'
+        ext = 'pdf'
 
     db.session.add(AuditLog(
         user_id=current_user.id,
