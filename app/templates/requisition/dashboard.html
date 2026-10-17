@@ -1,159 +1,137 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - FML Requisition System{% endblock %}
+{% block title %}Dashboard · First Mutual Life{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">
-            <i class="bi bi-speedometer2 me-2"></i>Dashboard
-        </h2>
-        {% if current_user.can_initiate %}
-        <a href="{{ url_for('requisition.create') }}" class="btn btn-fml-primary">
-            <i class="bi bi-plus-circle me-2"></i>New Requisition
+{% set status_badges = {
+    'draft': 'text-bg-secondary',
+    'pending_review': 'text-bg-info',
+    'pending_approval': 'text-bg-warning',
+    'partially_approved': 'text-bg-primary',
+    'approved': 'text-bg-success',
+    'rejected': 'text-bg-danger'
+} %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Dashboard</h2>
+        <p class="text-body-secondary mb-0">Overview of requisitions you can see.</p>
+    </div>
+    {% if current_user.can_initiate %}
+    <a href="{{ url_for('requisition.create') }}" class="btn btn-brand">
+        <i class="bi bi-plus-circle me-2"></i>New requisition
+    </a>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm border-start border-4 border-primary">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small text-uppercase fw-semibold text-body-secondary">My requisitions</div>
+                    <div class="fs-2 fw-bold">{{ stats.total_initiated }}</div>
+                </div>
+                <span class="fs-3 text-primary"><i class="bi bi-file-earmark-text"></i></span>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.can_review %}
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('requisition.review_queue') }}" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm border-start border-4 border-info">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-uppercase fw-semibold text-body-secondary">Pending review</div>
+                        <div class="fs-2 fw-bold text-body">{{ stats.pending_review }}</div>
+                    </div>
+                    <span class="fs-3 text-info"><i class="bi bi-eye"></i></span>
+                </div>
+            </div>
         </a>
-        {% endif %}
     </div>
-    
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-primary border-4 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase mb-1">My Requisitions</h6>
-                            <h2 class="mb-0">{{ stats.total_initiated }}</h2>
-                        </div>
-                        <div class="stat-icon bg-primary bg-opacity-10">
-                            <i class="bi bi-file-earmark-text text-primary"></i>
-                        </div>
+    {% endif %}
+
+    {% if current_user.can_approve %}
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('requisition.pending_approval') }}" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm border-start border-4 border-warning">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-uppercase fw-semibold text-body-secondary">Pending approval</div>
+                        <div class="fs-2 fw-bold text-body">{{ stats.pending_approval }}</div>
                     </div>
+                    <span class="fs-3 text-warning"><i class="bi bi-check2-circle"></i></span>
                 </div>
             </div>
-        </div>
-        
-        {% if current_user.can_review %}
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-info border-4 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase mb-1">Pending Review</h6>
-                            <h2 class="mb-0">{{ stats.pending_review }}</h2>
-                        </div>
-                        <div class="stat-icon bg-info bg-opacity-10">
-                            <i class="bi bi-eye text-info"></i>
-                        </div>
-                    </div>
-                </div>
-                <a href="{{ url_for('requisition.pending_review') }}" class="card-footer text-info small">
-                    View Details <i class="bi bi-arrow-right ms-1"></i>
-                </a>
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if current_user.can_approve %}
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-warning border-4 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase mb-1">Pending Approval</h6>
-                            <h2 class="mb-0">{{ stats.pending_approval }}</h2>
-                        </div>
-                        <div class="stat-icon bg-warning bg-opacity-10">
-                            <i class="bi bi-check-circle text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-                <a href="{{ url_for('requisition.pending_approval') }}" class="card-footer text-warning small">
-                    View Details <i class="bi bi-arrow-right ms-1"></i>
-                </a>
-            </div>
-        </div>
-        {% endif %}
-        
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-success border-4 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase mb-1">Approved</h6>
-                            <h2 class="mb-0">{{ stats.approved }}</h2>
-                        </div>
-                        <div class="stat-icon bg-success bg-opacity-10">
-                            <i class="bi bi-check2-all text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </a>
     </div>
-    
-    <!-- Recent Requisitions -->
-    <div class="card shadow-sm">
-        <div class="card-header py-3 recent-header">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Requisitions</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 recent-table align-middle">
-                    <thead class="recent-thead">
-                        <tr>
-                            <th>Requisition No.</th>
-                            <th>In Favor Of</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Initiator</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for req in recent_requisitions %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('requisition.detail', id=req.id) }}" class="fw-bold text-decoration-none">
-                                    {{ req.requisition_number }}
-                                </a>
-                            </td>
-                            <td>{{ req.in_favor_of }}</td>
-                            <td>{{ req.currency }} {{ '{:,.2f}'.format(req.total_debit) }}</td>
-                            <td>
-                                {% set status_classes = {
-                                    'draft': 'bg-secondary',
-                                    'pending_review': 'bg-info',
-                                    'pending_approval': 'bg-warning',
-                                    'partially_approved': 'bg-primary',
-                                    'approved': 'bg-success',
-                                    'rejected': 'bg-danger'
-                                } %}
-                                <span class="badge {{ status_classes.get(req.status, 'bg-secondary') }}">
-                                    {{ req.status.replace('_', ' ').title() }}
-                                </span>
-                            </td>
-                            <td>{{ req.initiator.full_name }}</td>
-                            <td>{{ req.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>
-                                <a href="{{ url_for('requisition.detail', id=req.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
-                                <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                                No requisitions found
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% endif %}
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm border-start border-4 border-success">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="small text-uppercase fw-semibold text-body-secondary">Approved</div>
+                    <div class="fs-2 fw-bold">{{ stats.approved }}</div>
+                </div>
+                <span class="fs-3 text-success"><i class="bi bi-patch-check"></i></span>
             </div>
         </div>
     </div>
 </div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2"></i>Recent requisitions</h5>
+        <a href="{{ url_for('requisition.list') }}" class="small text-decoration-none">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Requisition</th>
+                    <th scope="col">Payee</th>
+                    <th scope="col" class="text-end">Amount</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Initiator</th>
+                    <th scope="col">Date</th>
+                    <th scope="col" class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in recent_requisitions %}
+                <tr>
+                    <td class="fw-semibold">
+                        <a href="{{ url_for('requisition.detail', id=req.id) }}" class="text-decoration-none">{{ req.requisition_number }}</a>
+                    </td>
+                    <td>{{ req.in_favor_of }}</td>
+                    <td class="text-end font-monospace">{{ req.currency }} {{ '{:,.2f}'.format(req.total_debit or 0) }}</td>
+                    <td>
+                        <span class="badge rounded-pill {{ status_badges.get(req.status, 'text-bg-secondary') }}">
+                            {{ req.status.replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>{{ req.initiator.full_name }}</td>
+                    <td class="text-body-secondary">{{ req.created_at.strftime('%d %b %Y') }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('requisition.detail', id=req.id) }}" class="btn btn-sm btn-outline-secondary" aria-label="Open {{ req.requisition_number }}">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-body-secondary">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No requisitions yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
+
