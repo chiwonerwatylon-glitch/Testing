@@ -51,7 +51,14 @@
                     All Requisitions
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'requisition.reports' }}" href="{{ url_for('requisition.reports') }}">
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    Reports
+                </a>
+            </li>
         </ul>
+
         
         {% if current_user.role == 'superuser' %}
         <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">

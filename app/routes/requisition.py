@@ -4,7 +4,8 @@ from app import db
 from app.models import Requisition, RequisitionItem, ApprovalLog, AuditLog, User
 from app.utils.decorators import active_user_required, initiator_required, reviewer_required, approver_required
 from app.utils.document_generator import RequisitionDocumentGenerator
-from datetime import datetime
+from datetime import datetime, timedelta
+
 import os
 
 requisition_bp = Blueprint('requisition', __name__)
@@ -424,6 +425,128 @@ def download(id, format):
     else:
         flash('Invalid format requested.', 'danger')
         return redirect(url_for('requisition.detail', id=id))
+
+def _report_filters():
+    args = request.args
+    initiator = (args.get('initiator') or '').strip()
+    initiator_name = ''
+    if initiator:
+        try:
+            user = User.query.get(int(initiator))
+            initiator_name = user.full_name if user else ''
+        except ValueError:
+            initiator_name = ''
+    return {
+        'status': (args.get('status') or '').strip(),
+        'currency': (args.get('currency') or '').strip(),
+        'department': (args.get('department') or '').strip(),
+        'initiator': initiator,
+        'date_from': (args.get('date_from') or '').strip(),
+        'date_to': (args.get('date_to') or '').strip(),
+        'initiator_name': initiator_name,
+    }
+
+def _report_query(filters):
+    query = Requisition.query
+    if current_user.role != 'superuser' and not (current_user.can_review or current_user.can_approve):
+        query = query.filter(Requisition.initiator_id == current_user.id)
+
+    if filters.get('status'):
+        query = query.filter(Requisition.status == filters['status'])
+    if filters.get('currency'):
+        query = query.filter(Requisition.currency == filters['currency'])
+    if filters.get('initiator'):
+        try:
+            query = query.filter(Requisition.initiator_id == int(filters['initiator']))
+        except ValueError:
+            pass
+    if filters.get('date_from'):
+        try:
+            date_from = datetime.strptime(filters['date_from'], '%Y-%m-%d')
+            query = query.filter(Requisition.created_at >= date_from)
+        except ValueError:
+            pass
+    if filters.get('date_to'):
+        try:
+            date_to = datetime.strptime(filters['date_to'], '%Y-%m-%d')
+            query = query.filter(Requisition.created_at < date_to + timedelta(days=1))
+        except ValueError:
+            pass
+    if filters.get('department'):
+        query = query.join(RequisitionItem).filter(
+            RequisitionItem.account_department == filters['department']
+        ).distinct()
+
+    return query.order_by(Requisition.created_at.desc()).all()
+
+@requisition_bp.route('/reports')
+@login_required
+@active_user_required
+def reports():
+    filters = _report_filters()
+    results = _report_query(filters)
+    statuses = ['draft', 'pending_review', 'pending_approval', 'partially_approved', 'approved', 'rejected']
+    currencies = ['USD', 'ZWG', 'ZAR', 'BWP']
+    departments = ['EB', 'FIN']
+    users = User.query.filter_by(is_active=True).order_by(User.first_name).all()
+
+    from app.utils.reports import totals_by_currency
+    summary = {
+        'count': len(results),
+        'totals': totals_by_currency(results),
+        'approved': sum(1 for r in results if r.status == 'approved'),
+        'pending': sum(1 for r in results if r.status in ('pending_review', 'pending_approval', 'partially_approved')),
+    }
+    return render_template('requisition/reports.html',
+                           filters=filters,
+                           results=results,
+                           statuses=statuses,
+                           currencies=currencies,
+                           departments=departments,
+                           users=users,
+                           summary=summary)
+
+@requisition_bp.route('/reports/export/<fmt>')
+@login_required
+@active_user_required
+def reports_export(fmt):
+    if fmt not in ('csv', 'xlsx'):
+        flash('Unsupported export format.', 'warning')
+        return redirect(url_for('requisition.reports'))
+
+    filters = _report_filters()
+    results = _report_query(filters)
+
+    from app.utils.reports import to_csv, to_excel, describe_filters
+    meta = {
+        'generated': datetime.utcnow().strftime('%d %b %Y %H:%M UTC'),
+        'filters': describe_filters(filters),
+    }
+    if fmt == 'csv':
+        buf = to_csv(results, meta)
+        mimetype = 'text/csv'
+        ext = 'csv'
+    else:
+        buf = to_excel(results, meta)
+        mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ext = 'xlsx'
+
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action='export_report',
+        entity_type='report',
+        entity_id=0,
+        details=f'Exported {fmt} report ({len(results)} rows)',
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+
+    return send_file(
+        buf,
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=f"requisition_report_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.{ext}"
+    )
 
 @requisition_bp.route('/pending-review')
 @login_required
