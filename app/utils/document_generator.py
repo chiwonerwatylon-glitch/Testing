@@ -150,8 +150,35 @@ class RequisitionDocumentGenerator:
         elements.append(Paragraph("<b>AUTHORIZATION</b>", auth_style))
         elements.append(Spacer(1, 0.2*inch))
         
-        sig_data = self._get_signature_data()
-        sig_table = Table(sig_data, colWidths=[2.5*inch, 2.5*inch, 2*inch])
+        from reportlab.platypus import KeepTogether
+        from xml.sax.saxutils import escape as _xml_escape
+        
+        req = self.requisition
+        sig_data = [['Role', 'Name & Signature', 'Date Signed', 'Signature Hash']]
+        
+        sig_data.append(['Initiated By:',
+                         self._user_name(getattr(req, 'initiator', None), '-'),
+                         self._format_dt(getattr(req, 'initiated_at', None), '-'),
+                         self._short_hash(req, 'initiator_signature_hash', '-')])
+        
+        reviewer = getattr(req, 'reviewer', None)
+        sig_data.append(['Reviewed By:',
+                         self._user_name(reviewer, 'Pending') if reviewer else 'Pending',
+                         self._format_dt(getattr(req, 'reviewed_at', None), 'Pending'),
+                         self._short_hash(req, 'reviewer_signature_hash', '-')])
+        
+        approved_logs = self._approved_logs()
+        for level in range(1, (getattr(req, 'required_approvals', 0) or 0) + 1):
+            log = next((l for l in approved_logs if getattr(l, 'approval_level', None) == level), None)
+            if log:
+                sig_data.append([f'Approver {level}:',
+                                 self._user_name(getattr(log, 'approver', None), 'Pending'),
+                                 self._format_dt(getattr(log, 'created_at', None), 'Pending'),
+                                 self._short_hash(log, 'signature_hash', '-')])
+            else:
+                sig_data.append([f'Approver {level}:', 'Pending', 'Pending', '-'])
+        
+        sig_table = Table(sig_data, colWidths=[1.3*inch, 2.2*inch, 1.6*inch, 1.9*inch])
         sig_table.setStyle(TableStyle([
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
@@ -163,6 +190,53 @@ class RequisitionDocumentGenerator:
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ]))
         elements.append(sig_table)
+        
+        # Document security box
+        security = self._get_security_info()
+        value_style = ParagraphStyle(
+            'SecurityValue',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica',
+            leading=11
+        )
+        label_style = ParagraphStyle(
+            'SecurityLabel',
+            parent=value_style,
+            fontName='Helvetica-Bold'
+        )
+        note_style = ParagraphStyle(
+            'SecurityNote',
+            parent=value_style,
+            fontName='Helvetica-Oblique',
+            fontSize=8
+        )
+        
+        def _cell(value):
+            return Paragraph(_xml_escape(str(value or '-')), value_style)
+        
+        security_data = [
+            [Paragraph('Document code', label_style), _cell(security.get('document_code'))],
+            [Paragraph('Authorised amount', label_style), _cell(security.get('authorised_amount'))],
+            [Paragraph('Verify at', label_style), _cell(security.get('verify_url'))],
+            [Paragraph('Any change to amounts, status or approvals invalidates this document code.', note_style), ''],
+        ]
+        security_table = Table(security_data, colWidths=[1.6*inch, 5.4*inch])
+        security_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, FML_BLACK),
+            ('SPAN', (0, -1), (-1, -1)),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BACKGROUND', (0, 0), (0, -2), colors.HexColor('#F8F8F8')),
+        ]))
+        elements.append(Spacer(1, 0.3*inch))
+        elements.append(KeepTogether([
+            Paragraph("<b>DOCUMENT SECURITY</b>", auth_style),
+            Spacer(1, 0.1*inch),
+            security_table,
+        ]))
+
         
         # Footer
         elements.append(Spacer(1, 0.3*inch))
