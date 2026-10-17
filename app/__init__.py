@@ -1,83 +1,107 @@
+from __future__ import annotations
+
+import os
+
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import IntegrityError
-import os
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
 csrf = CSRFProtect()
 
-def create_app():
+
+def create_app() -> Flask:
+    """Application factory for the FML Requisition System."""
     app = Flask(__name__)
-    
+
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fml-requisition-secret-key-2024')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///fml_requisition.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'signatures')
-    
+    app.config["SECRET_KEY"] = os.environ.get(
+        "SECRET_KEY", "fml-requisition-secret-key-2024"
+    )
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+        "DATABASE_URL", "sqlite:///fml_requisition.db"
+    )
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
+    app.config["UPLOAD_FOLDER"] = os.path.join(
+        app.root_path, "static", "signatures"
+    )
+
     # Ensure upload folder exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-    
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message_category = 'info'
-    
+
+    login_manager.login_view = "auth.login"
+    login_manager.login_message_category = "info"
+
     # Register blueprints
-    from app.routes.auth import auth_bp
-    from app.routes.requisition import requisition_bp
     from app.routes.admin import admin_bp
     from app.routes.api import api_bp
     from app.routes.assistant import assistant_bp
-    
+    from app.routes.auth import auth_bp
+    from app.routes.requisition import requisition_bp
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(requisition_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(assistant_bp)
-    
-    # Ensure database tables exist (gunicorn does not run run.py's __main__ block)
+
+    # Ensure database tables and batch columns exist; seed superuser
     with app.app_context():
         db.create_all()
         _ensure_batch_columns()
         seed_superuser(app)
-    
+
     return app
 
+
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(user_id: str):
+    """Flask-Login user loader callback."""
     from app.models import User
-    return User.query.get(int(user_id))
 
-def seed_superuser(app):
-    """Create a superuser from environment variables if it does not exist yet.
+    try:
+        return User.query.get(int(user_id))
+    except (TypeError, ValueError):
+        return None
 
-    Reads ADMIN_EMAIL and ADMIN_PASSWORD. Optional: ADMIN_FIRST_NAME (default 'Admin'),
-    ADMIN_LAST_NAME (default 'User'), ADMIN_EMPLOYEE_ID (default 'ADMIN001'),
-    ADMIN_DEPARTMENT (default 'IT'). Never hardcode credentials in this file.
+
+def seed_superuser(app: Flask) -> None:
+    """Create or update a superuser based on environment variables.
+
+    Reads:
+        ADMIN_EMAIL, ADMIN_PASSWORD
+        Optional:
+            ADMIN_FIRST_NAME (default 'Admin'),
+            ADMIN_LAST_NAME (default 'User'),
+            ADMIN_EMPLOYEE_ID (default 'ADMIN001'),
+            ADMIN_DEPARTMENT (default 'IT').
+
+    Never hardcode credentials in this file.
     """
-    email = os.environ.get('ADMIN_EMAIL')
-    password = os.environ.get('ADMIN_PASSWORD')
+    email = os.environ.get("ADMIN_EMAIL")
+    password = os.environ.get("ADMIN_PASSWORD")
     if not email or not password:
         return
 
     from app.models import User
     from werkzeug.security import generate_password_hash
 
-    first_name = os.environ.get('ADMIN_FIRST_NAME') or 'Admin'
-    last_name = os.environ.get('ADMIN_LAST_NAME') or 'User'
-    employee_id = os.environ.get('ADMIN_EMPLOYEE_ID') or 'ADMIN001'
-    department = os.environ.get('ADMIN_DEPARTMENT') or 'IT'
+    first_name = os.environ.get("ADMIN_FIRST_NAME") or "Admin"
+    last_name = os.environ.get("ADMIN_LAST_NAME") or "User"
+    employee_id = os.environ.get("ADMIN_EMPLOYEE_ID") or "ADMIN001"
+    department = os.environ.get("ADMIN_DEPARTMENT") or "IT"
 
     with app.app_context():
         user = User.query.filter_by(email=email).first()
@@ -86,24 +110,28 @@ def seed_superuser(app):
             # Never overwrite an existing password; only ensure admin privileges.
             changed = False
             for attr, value in (
-                ('role', 'superuser'),
-                ('is_active', True),
-                ('can_initiate', True),
-                ('can_review', True),
-                ('can_approve', True),
-                ('is_senior_approver', True),
+                ("role", "superuser"),
+                ("is_active", True),
+                ("can_initiate", True),
+                ("can_review", True),
+                ("can_approve", True),
+                ("is_senior_approver", True),
             ):
                 if getattr(user, attr) != value:
                     setattr(user, attr, value)
                     changed = True
             if changed:
                 db.session.commit()
-                app.logger.info('Updated existing user to superuser privileges: %s', email)
+                app.logger.info(
+                    "Updated existing user to superuser privileges: %s",
+                    email,
+                )
             return
 
         if User.query.filter_by(employee_id=employee_id).first():
             app.logger.warning(
-                'Skipping superuser creation: employee_id %s is already used by another user.',
+                "Skipping superuser creation: employee_id %s is already used by "
+                "another user.",
                 employee_id,
             )
             return
@@ -115,7 +143,7 @@ def seed_superuser(app):
             employee_id=employee_id,
             department=department,
             password_hash=generate_password_hash(password),
-            role='superuser',
+            role="superuser",
             is_active=True,
             can_initiate=True,
             can_review=True,
@@ -128,19 +156,34 @@ def seed_superuser(app):
         except IntegrityError:
             # Another gunicorn worker created the same admin at boot. Not an error.
             db.session.rollback()
-            app.logger.info('Superuser %s already created by another worker.', email)
+            app.logger.info(
+                "Superuser %s already created by another worker.", email
+            )
             return
-        app.logger.info('Created superuser: %s', email)
+        app.logger.info("Created superuser: %s", email)
 
-def _ensure_batch_columns():
-    """create_all() does not add columns to existing tables; add any missing batch_items columns."""
+
+def _ensure_batch_columns() -> None:
+    """Add missing batch_items columns for older databases.
+
+    create_all() does not add columns to existing tables, so we patch them here.
+    """
     from sqlalchemy import inspect, text
+
     inspector = inspect(db.engine)
-    if 'batch_items' not in inspector.get_table_names():
+    if "batch_items" not in inspector.get_table_names():
         return
-    columns = {c['name'] for c in inspector.get_columns('batch_items')}
-    wanted = {'reference': 'VARCHAR(255)', 'account_name': 'VARCHAR(200)', 'code': 'VARCHAR(50)'}
+
+    columns = {c["name"] for c in inspector.get_columns("batch_items")}
+    wanted = {
+        "reference": "VARCHAR(255)",
+        "account_name": "VARCHAR(200)",
+        "code": "VARCHAR(50)",
+    }
+
     with db.engine.begin() as conn:
         for name, ddl in wanted.items():
             if name not in columns:
-                conn.execute(text(f'ALTER TABLE batch_items ADD COLUMN {name} {ddl}'))
+                conn.execute(
+                    text(f"ALTER TABLE batch_items ADD COLUMN {name} {ddl}")
+                )
