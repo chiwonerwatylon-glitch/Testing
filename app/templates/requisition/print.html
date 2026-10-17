@@ -97,7 +97,15 @@
     </div>
 
     <div class="print-doc">
-        <table class="doc-control w-100 mb-4">
+        {% call render_requisition_document(
+            requisition,
+            approval_logs,
+            pending_approvals,
+            show_progress=False,
+            qr=qr,
+            signature_code=signature_code
+        ) %}
+        <table class="doc-control w-100">
             <tbody>
                 <tr>
                     <td class="fw-bold">Requisition No</td>
@@ -141,15 +149,7 @@
                 </tr>
             </tbody>
         </table>
-
-        {{ render_requisition_document(
-            requisition,
-            approval_logs,
-            pending_approvals,
-            show_progress=False,
-            qr=qr,
-            signature_code=signature_code
-        ) }}
+        {% endcall %}
     </div>
 
     <div class="doc-footer text-center">
