@@ -356,7 +356,7 @@ a:hover {
 .table th {
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--fml-gray);
+    color: var(--bs-secondary-color);
     text-transform: uppercase;
     letter-spacing: 0.3px;
     border-top: none;
@@ -388,7 +388,7 @@ a:hover {
 .form-label {
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--fml-black);
+    color: var(--bs-body-color);
     margin-bottom: 0.4rem;
 }
 
@@ -882,6 +882,9 @@ a:hover {
 
 /* Print-specific adjustments */
 @media print {
+    .req-auth-table { font-size: 9.5pt; }
+    .req-auth-table img.req-sig-img { max-height: 36px; }
+
     .req-signature-block {
         background-color: transparent !important;
         border-left: 2px solid #000 !important;
@@ -937,3 +940,49 @@ a:hover {
 [data-bs-theme="dark"] .auth-card { background: #1a1d21; color: #dee2e6; }
 [data-bs-theme="dark"] .auth-title, [data-bs-theme="dark"] .auth-footer { color: #dee2e6; }
 [data-bs-theme="dark"] .auth-subtitle { color: #adb5bd; }
+
+/* ============ DARK MODE: readable text everywhere ============ */
+[data-bs-theme="dark"] .form-label,
+[data-bs-theme="dark"] .form-check-label,
+[data-bs-theme="dark"] .form-text,
+[data-bs-theme="dark"] label,
+[data-bs-theme="dark"] .input-group-text,
+[data-bs-theme="dark"] .dropdown-item-text,
+[data-bs-theme="dark"] .list-group-item,
+[data-bs-theme="dark"] .nav-tabs .nav-link,
+[data-bs-theme="dark"] .breadcrumb-item,
+[data-bs-theme="dark"] .page-link,
+[data-bs-theme="dark"] .section-title,
+[data-bs-theme="dark"] .sidebar-heading { color: #dee2e6 !important; }
+[data-bs-theme="dark"] .nav-tabs .nav-link.active { background-color: #1a1d21; border-color: #2c3035 #2c3035 #1a1d21; color: #ffffff !important; }
+[data-bs-theme="dark"] .nav-tabs { border-bottom-color: #2c3035; }
+[data-bs-theme="dark"] .page-link { background-color: #1a1d21; border-color: #2c3035; }
+[data-bs-theme="dark"] .page-item.disabled .page-link { background-color: #1a1d21; }
+[data-bs-theme="dark"] .requisition-document *:not(.badge):not(.btn):not(.alert) { color: #e9ecef; }
+[data-bs-theme="dark"] .requisition-document .text-muted,
+[data-bs-theme="dark"] .requisition-document small.text-muted { color: #adb5bd !important; }
+[data-bs-theme="dark"] .requisition-document .fml-title,
+[data-bs-theme="dark"] .requisition-document h2.fml-title { color: #ff5c73 !important; }
+[data-bs-theme="dark"] .requisition-document .table,
+[data-bs-theme="dark"] .requisition-document .table td,
+[data-bs-theme="dark"] .requisition-document .table th { background-color: transparent; border-color: #343a40; color: #e9ecef; }
+[data-bs-theme="dark"] .requisition-document thead.table-fml-primary th,
+[data-bs-theme="dark"] .requisition-document .table-fml-primary th { background-color: #000000; color: #ffffff !important; }
+[data-bs-theme="dark"] .requisition-document .req-totals-row td { background-color: #3a1a20; color: #ffb3bd !important; }
+[data-bs-theme="dark"] .req-auth-table td, [data-bs-theme="dark"] .req-auth-table th { border-color: #343a40; }
+[data-bs-theme="dark"] .req-auth-table thead th { background-color: #22262b; color: #f1f3f5 !important; }
+[data-bs-theme="dark"] .table-light th, [data-bs-theme="dark"] thead.table-light th,
+[data-bs-theme="dark"] thead.table-light td { background-color: #22262b !important; color: #f1f3f5 !important; }
+[data-bs-theme="dark"] .card-title, [data-bs-theme="dark"] .card-header h1,
+[data-bs-theme="dark"] .card-header h2, [data-bs-theme="dark"] .card-header h3,
+[data-bs-theme="dark"] .card-header h4, [data-bs-theme="dark"] .card-header h5 { color: #f1f3f5; }
+[data-bs-theme="dark"] .form-control::placeholder { color: #6c757d; }
+[data-bs-theme="dark"] .form-control:disabled, [data-bs-theme="dark"] .form-select:disabled { background-color: #1f2328; color: #adb5bd; }
+[data-bs-theme="dark"] .text-dark { color: #f1f3f5 !important; }
+[data-bs-theme="dark"] .bg-light { background-color: #22262b !important; color: #dee2e6 !important; }
+[data-bs-theme="dark"] .btn-outline-secondary { color: #dee2e6; border-color: #6c757d; }
+[data-bs-theme="dark"] .btn-outline-primary { color: #ff7b8c; }
+[data-bs-theme="dark"] .btn-outline-primary:hover { color: #ffffff; }
+[data-bs-theme="dark"] .alert { color: inherit; }
+[data-bs-theme="dark"] .modal-content { background-color: #1a1d21; color: #dee2e6; }
+[data-bs-theme="dark"] .auth-container { background: #0b0d10; }
