@@ -222,3 +222,23 @@ class BatchItem(db.Model):
 
     batch = db.relationship('RequisitionBatch', backref=db.backref('items', order_by='BatchItem.id'))
     requisition = db.relationship('Requisition', backref=db.backref('batch_item', uselist=False))
+
+
+class Notification(db.Model):
+    """In-app notice about a requisition change, shown in the navbar bell."""
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    requisition_id = db.Column(db.Integer, db.ForeignKey('requisitions.id'), nullable=True)
+    message = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(20), default='info')
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic'))
+    requisition = db.relationship('Requisition')
+
+    def __repr__(self):
+        return f'<Notification {self.user_id}: {self.message[:30]}>'
+

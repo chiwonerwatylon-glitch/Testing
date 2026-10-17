@@ -56,3 +56,32 @@ def get_approvers():
         'department': a.department,
         'is_senior': a.is_senior_approver
     } for a in approvers])
+
+@api_bp.route('/notifications')
+@login_required
+@active_user_required
+def notifications():
+    from app.models import Notification
+    items = current_user.notifications.order_by(Notification.created_at.desc()).limit(15).all()
+    unread = current_user.notifications.filter_by(is_read=False).count()
+    return jsonify({
+        'unread': unread,
+        'items': [{
+            'id': n.id,
+            'message': n.message,
+            'category': n.category,
+            'is_read': n.is_read,
+            'requisition_id': n.requisition_id,
+            'created_at': n.created_at.strftime('%d %b %Y %H:%M') if n.created_at else '',
+        } for n in items],
+    })
+
+@api_bp.route('/notifications/read', methods=['POST'])
+@login_required
+@active_user_required
+def notifications_read():
+    from app.models import Notification
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'ok': True})
+
