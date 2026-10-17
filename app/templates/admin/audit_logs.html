@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid py-4">
 
-    <!-- Page header -->
+    {# Page header #}
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
             <h2 class="mb-1 d-flex align-items-center">
@@ -28,34 +28,41 @@
         {% endif %}
     </div>
 
-    <!-- Filters -->
+    {# Filters #}
     <div class="card mb-4 shadow-sm">
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
+            <form method="get" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
-                    <label class="form-label mb-1">User</label>
-                    <select name="user_id" class="form-select">
+                    <label for="filter-user" class="form-label mb-1">User</label>
+                    <select id="filter-user" name="user_id" class="form-select">
                         <option value="">All Users</option>
                         {% for u in users %}
-                        <option value="{{ u.id }}" {{ 'selected' if selected_user_id == u.id }}>{{ u.full_name }}</option>
+                        <option
+                            value="{{ u.id }}"
+                            {% if selected_user_id == u.id %}selected{% endif %}
+                        >
+                            {{ u.full_name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-12 col-md-4">
-                    <label class="form-label mb-1">Action</label>
+                    <label for="filter-action" class="form-label mb-1">Action</label>
                     <input
+                        id="filter-action"
                         type="text"
                         class="form-control"
                         name="action"
-                        placeholder="e.g. created_requisition, approved_requisition"
+                        placeholder="e.g. create_requisition, approve_requisition"
                         value="{{ action_filter }}"
                     >
                 </div>
 
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1">From</label>
+                    <label for="filter-start" class="form-label mb-1">From</label>
                     <input
+                        id="filter-start"
                         type="date"
                         class="form-control"
                         name="start_date"
@@ -64,8 +71,9 @@
                 </div>
 
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1">To</label>
+                    <label for="filter-end" class="form-label mb-1">To</label>
                     <input
+                        id="filter-end"
                         type="date"
                         class="form-control"
                         name="end_date"
@@ -78,17 +86,19 @@
                         href="{{ url_for('admin.audit_logs') }}"
                         class="btn btn-outline-secondary btn-sm px-3"
                     >
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        Reset
                     </a>
                     <button type="submit" class="btn btn-fml-primary btn-sm px-4">
-                        <i class="bi bi-funnel me-1"></i> Apply Filters
+                        <i class="bi bi-funnel me-1"></i>
+                        Apply Filters
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Logs table -->
+    {# Logs table #}
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center recent-header">
             <h5 class="mb-0 fw-semibold">
@@ -143,7 +153,8 @@
                             </td>
                             <td>
                                 <small class="text-muted">
-                                    <i class="bi bi-globe me-1"></i>{{ log.ip_address or '—' }}
+                                    <i class="bi bi-globe me-1"></i>
+                                    {{ log.ip_address or '—' }}
                                 </small>
                             </td>
                             <td>
@@ -177,11 +188,17 @@
             </div>
             <nav aria-label="Audit logs pagination">
                 <ul class="pagination pagination-sm mb-0">
+                    {# Previous #}
                     {% if logs.has_prev %}
                     <li class="page-item">
                         <a
                             class="page-link"
-                            href="{{ url_for('admin.audit_logs', page=logs.prev_num, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
+                            href="{{ url_for('admin.audit_logs',
+                                              page=logs.prev_num,
+                                              user_id=selected_user_id,
+                                              action=action_filter,
+                                              start_date=start_date,
+                                              end_date=end_date) }}"
                             aria-label="Previous"
                         >
                             <span aria-hidden="true">&laquo;</span>
@@ -193,23 +210,34 @@
                     </li>
                     {% endif %}
 
-                    {# Optional: show current +/- 1 pages #}
+                    {# Current page +/- 1 #}
                     {% for p in range(max(1, logs.page - 1), min(logs.pages + 1, logs.page + 2)) %}
-                        <li class="page-item {{ 'active' if p == logs.page }}">
-                            <a
-                                class="page-link"
-                                href="{{ url_for('admin.audit_logs', page=p, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
-                            >
-                                {{ p }}
-                            </a>
-                        </li>
+                    <li class="page-item {% if p == logs.page %}active{% endif %}">
+                        <a
+                            class="page-link"
+                            href="{{ url_for('admin.audit_logs',
+                                              page=p,
+                                              user_id=selected_user_id,
+                                              action=action_filter,
+                                              start_date=start_date,
+                                              end_date=end_date) }}"
+                        >
+                            {{ p }}
+                        </a>
+                    </li>
                     {% endfor %}
 
+                    {# Next #}
                     {% if logs.has_next %}
                     <li class="page-item">
                         <a
                             class="page-link"
-                            href="{{ url_for('admin.audit_logs', page=logs.next_num, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
+                            href="{{ url_for('admin.audit_logs',
+                                              page=logs.next_num,
+                                              user_id=selected_user_id,
+                                              action=action_filter,
+                                              start_date=start_date,
+                                              end_date=end_date) }}"
                             aria-label="Next"
                         >
                             <span aria-hidden="true">&raquo;</span>
@@ -227,6 +255,3 @@
     </div>
 </div>
 {% endblock %}
-
-
-
