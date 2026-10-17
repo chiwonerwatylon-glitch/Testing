@@ -30,6 +30,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Dark / light mode toggle (preference stored per browser)
+    const themeToggle = document.getElementById('themeToggle');
+    function applyThemeIcon() {
+        if (!themeToggle) return;
+        const icon = themeToggle.querySelector('i');
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        icon.classList.toggle('bi-moon-stars', !isDark);
+        icon.classList.toggle('bi-sun', isDark);
+    }
+    if (themeToggle) {
+        applyThemeIcon();
+        themeToggle.addEventListener('click', function() {
+            const next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('fml-theme', next);
+            applyThemeIcon();
+        });
+    }
 });
 
 function fetchStats() {
