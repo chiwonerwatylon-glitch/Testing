@@ -895,3 +895,10 @@ a:hover {
     }
 }
 
+
+/* Dark mode overrides for requisition documents */
+[data-bs-theme="dark"] .requisition-document,
+[data-bs-theme="dark"] .requisition-document-wrapper { background-color: var(--bs-body-bg); color: var(--bs-body-color); }
+[data-bs-theme="dark"] .req-reason-box { background-color: #2b3035; }
+[data-bs-theme="dark"] .req-doc-logo { filter: brightness(1.15); }
+[data-bs-theme="dark"] .req-sig-img { background-color: #ffffff; border-radius: 4px; }
