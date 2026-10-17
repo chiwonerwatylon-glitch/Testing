@@ -375,14 +375,19 @@ class RequisitionDocumentGenerator:
         for col in range(1, 8):
             ws.cell(row=row, column=col).fill = totals_fill
         ws.cell(row=row, column=5, value='TOTALS').font = totals_font
-        ws.cell(row=row, column=6, value=self.requisition.total_debit).font = totals_font
-        ws.cell(row=row, column=7, value=self.requisition.total_credit).font = totals_font
+        total_debit_cell = ws.cell(row=row, column=6, value=float(self.requisition.total_debit or 0))
+        total_debit_cell.font = totals_font
+        total_debit_cell.number_format = '#,##0.00'
+        total_credit_cell = ws.cell(row=row, column=7, value=float(self.requisition.total_credit or 0))
+        total_credit_cell.font = totals_font
+        total_credit_cell.number_format = '#,##0.00'
+
         
         # Column widths
         ws.column_dimensions['A'].width = 20
         ws.column_dimensions['B'].width = 15
         ws.column_dimensions['C'].width = 15
-        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['D'].width = 18
         ws.column_dimensions['E'].width = 25
         ws.column_dimensions['F'].width = 12
         ws.column_dimensions['G'].width = 12
@@ -439,18 +444,40 @@ class RequisitionDocumentGenerator:
         
         # Signatures
         writer.writerow(['AUTHORIZATION'])
-        writer.writerow(['Role', 'Name', 'Date Signed'])
-        writer.writerow(['Initiated By', self.requisition.initiator.full_name, 
-                        self.requisition.initiated_at.strftime('%Y-%m-%d %H:%M') if self.requisition.initiated_at else ''])
+        writer.writerow(['Role', 'Name', 'Date Signed', 'Signature Hash'])
+        req = self.requisition
+        writer.writerow(['Initiated By',
+                         self._user_name(getattr(req, 'initiator', None)),
+                         self._format_dt(getattr(req, 'initiated_at', None)),
+                         self._short_hash(req, 'initiator_signature_hash')])
         
-        if self.requisition.reviewer:
-            writer.writerow(['Reviewed By', self.requisition.reviewer.full_name,
-                           self.requisition.reviewed_at.strftime('%Y-%m-%d %H:%M') if self.requisition.reviewed_at else ''])
+        reviewer = getattr(req, 'reviewer', None)
+        writer.writerow(['Reviewed By',
+                         self._user_name(reviewer, 'Pending') if reviewer else 'Pending',
+                         self._format_dt(getattr(req, 'reviewed_at', None), 'Pending'),
+                         self._short_hash(req, 'reviewer_signature_hash')])
         
-        from app.models import ApprovalLog
-        for log in self.requisition.approval_logs.filter_by(action='approved').order_by(ApprovalLog.approval_level):
-            writer.writerow([f'Approver {log.approval_level}', log.approver.full_name,
-                           log.created_at.strftime('%Y-%m-%d %H:%M')])
+        approved_logs = self._approved_logs()
+        level_labels = {1: '1st Approver', 2: '2nd Approver', 3: 'Senior Approver (3rd)'}
+        for level in range(1, (req.required_approvals or 0) + 1):
+            label = level_labels.get(level, f'Approver {level}')
+            log = next((l for l in approved_logs if l.approval_level == level), None)
+            if log:
+                writer.writerow([label,
+                                 self._user_name(getattr(log, 'approver', None), 'Pending'),
+                                 self._format_dt(getattr(log, 'created_at', None), 'Pending'),
+                                 self._short_hash(log, 'signature_hash')])
+            else:
+                writer.writerow([label, 'Pending', 'Pending', ''])
+        
+        # Document security
+        writer.writerow([])
+        writer.writerow(['DOCUMENT SECURITY'])
+        security = self._get_security_info()
+        writer.writerow(['Document code', security['document_code']])
+        writer.writerow(['Authorised amount', security['authorised_amount']])
+        writer.writerow(['Verify at', security['verify_url']])
+
         
         # Convert to bytes
         buffer.seek(0)
@@ -540,14 +567,14 @@ class RequisitionDocumentGenerator:
             row_idx += 1
     
     def _add_excel_signatures(self, ws, start_row):
-        """Add signatures section to Excel"""
-        from app.models import ApprovalLog
+        """Add signatures and document security sections to Excel"""
+        req = self.requisition
         
         header_fill = PatternFill(start_color='1A1A1A', end_color='1A1A1A', fill_type='solid')
         header_font_white = Font(bold=True, color='FFFFFF')
         
         row = start_row
-        headers = ['Role', 'Name & Signature', 'Date Signed']
+        headers = ['Role', 'Name & Signature', 'Date Signed', 'Signature Hash']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col, value=header)
             cell.font = header_font_white
@@ -555,25 +582,107 @@ class RequisitionDocumentGenerator:
         
         row += 1
         ws.cell(row=row, column=1, value='Initiated By:')
-        ws.cell(row=row, column=2, value=self.requisition.initiator.full_name)
-        ws.cell(row=row, column=3, value=self.requisition.initiated_at.strftime('%Y-%m-%d %H:%M') if self.requisition.initiated_at else '')
+        ws.cell(row=row, column=2, value=self._user_name(getattr(req, 'initiator', None)))
+        ws.cell(row=row, column=3, value=self._format_dt(getattr(req, 'initiated_at', None)))
+        ws.cell(row=row, column=4, value=self._short_hash(req, 'initiator_signature_hash', '-'))
         
         row += 1
-        if self.requisition.reviewer:
+        if getattr(req, 'reviewer', None):
             ws.cell(row=row, column=1, value='Reviewed By:')
-            ws.cell(row=row, column=2, value=self.requisition.reviewer.full_name)
-            ws.cell(row=row, column=3, value=self.requisition.reviewed_at.strftime('%Y-%m-%d %H:%M') if self.requisition.reviewed_at else '')
+            ws.cell(row=row, column=2, value=self._user_name(req.reviewer))
+            ws.cell(row=row, column=3, value=self._format_dt(getattr(req, 'reviewed_at', None)))
+            ws.cell(row=row, column=4, value=self._short_hash(req, 'reviewer_signature_hash', '-'))
             row += 1
         
-        approval_logs = list(self.requisition.approval_logs.filter_by(action='approved').order_by(ApprovalLog.approval_level))
+        approved_logs = self._approved_logs()
         
-        for i in range(1, self.requisition.required_approvals + 1):
-            approver_log = next((log for log in approval_logs if log.approval_level == i), None)
+        for i in range(1, (req.required_approvals or 0) + 1):
+            approver_log = next((log for log in approved_logs if log.approval_level == i), None)
             ws.cell(row=row, column=1, value=f'Approver {i}:')
             if approver_log:
-                ws.cell(row=row, column=2, value=approver_log.approver.full_name)
-                ws.cell(row=row, column=3, value=approver_log.created_at.strftime('%Y-%m-%d %H:%M'))
+                ws.cell(row=row, column=2, value=self._user_name(getattr(approver_log, 'approver', None), 'Pending'))
+                ws.cell(row=row, column=3, value=self._format_dt(getattr(approver_log, 'created_at', None), 'Pending'))
+                ws.cell(row=row, column=4, value=self._short_hash(approver_log, 'signature_hash', '-'))
             else:
-                ws.cell(row=row, column=2, value='________________')
-                ws.cell(row=row, column=3, value='________________')
+                ws.cell(row=row, column=2, value='Pending')
+                ws.cell(row=row, column=3, value='Pending')
+                ws.cell(row=row, column=4, value='-')
             row += 1
+        
+        # Document security
+        row += 1
+        ws.cell(row=row, column=1, value='DOCUMENT SECURITY').font = Font(bold=True, size=12, color='D21F3C')
+        row += 1
+        security = self._get_security_info()
+        for label, value in (
+            ('Document code', security['document_code']),
+            ('Authorised amount', security['authorised_amount']),
+            ('Verify at', security['verify_url']),
+        ):
+            ws.cell(row=row, column=1, value=label).font = Font(bold=True)
+            ws.cell(row=row, column=2, value=value)
+            row += 1
+        
+        return row
+
+    # ------------------------------------------------------------------
+    # Shared helpers for CSV / Excel authorization output
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _format_dt(value, default=''):
+        """Format a datetime as '%Y-%m-%d %H:%M', or return default."""
+        if not value:
+            return default
+        try:
+            return value.strftime('%Y-%m-%d %H:%M')
+        except Exception:
+            return default
+
+    @staticmethod
+    def _user_name(user, default=''):
+        """Full name of a user, or default if the user/name is missing."""
+        return getattr(user, 'full_name', None) or default
+
+    @staticmethod
+    def _short_hash(obj, attr, default=''):
+        """First 16 characters of obj.<attr>, or default if missing."""
+        value = getattr(obj, attr, None) if obj is not None else None
+        return str(value)[:16] if value else default
+
+    def _approved_logs(self):
+        """Approval logs with action='approved', ordered by level."""
+        from app.models import ApprovalLog
+        try:
+            return list(self.requisition.approval_logs.filter_by(action='approved').order_by(ApprovalLog.approval_level))
+        except Exception:
+            return []
+
+    def _get_security_info(self):
+        """Document code, authorised amount and verification URL for the requisition."""
+        from flask import url_for
+        from app.models import ApprovalLog
+        req = self.requisition
+        
+        document_code = ''
+        try:
+            from app.routes.requisition import _document_code
+            approval_logs = ApprovalLog.query.filter_by(requisition_id=req.id).order_by(ApprovalLog.approval_level).all()
+            document_code = _document_code(req, approval_logs)
+        except Exception:
+            current_app.logger.exception('Could not compute document code for requisition %s', getattr(req, 'id', None))
+        
+        try:
+            verify_url = url_for('requisition.verify', id=req.id, _external=True)
+        except Exception:
+            verify_url = f'/verify/{req.id}'
+        
+        try:
+            amount = f"{getattr(req, 'currency', '') or ''} {float(getattr(req, 'total_debit', 0) or 0):.2f}".strip()
+        except (TypeError, ValueError):
+            amount = ''
+        
+        return {
+            'document_code': document_code,
+            'authorised_amount': amount,
+            'verify_url': verify_url,
+        }
