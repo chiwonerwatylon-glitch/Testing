@@ -38,11 +38,13 @@ def create_app():
     from app.routes.requisition import requisition_bp
     from app.routes.admin import admin_bp
     from app.routes.api import api_bp
+    from app.routes.assistant import assistant_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(requisition_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(assistant_bp)
     
     # Ensure database tables exist (gunicorn does not run run.py's __main__ block)
     with app.app_context():

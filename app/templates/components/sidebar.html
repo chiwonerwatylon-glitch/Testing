@@ -73,6 +73,16 @@
                     Reports
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'assistant.index' }}"
+                    href="{{ url_for('assistant.index') }}"
+                >
+                    <i class="bi bi-chat-dots me-2"></i>
+                    Assistant
+                </a>
+            </li>
         </ul>
 
         {# Approvals section #}
