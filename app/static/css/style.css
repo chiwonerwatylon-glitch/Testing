@@ -40,6 +40,10 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     font-family: var(--font-primary);
     background-color: var(--bs-body-bg);
@@ -431,56 +435,50 @@ a:hover {
 }
 
 /* ============================================
-   AUTH PAGES – “100 billion dollar” polish
+   AUTH PAGES – Full-height, premium light & dark
    ============================================ */
 
 .auth-container {
     min-height: 100vh;
+    width: 100%;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    /* Softer, premium gradient for light mode */
-    background:
-        radial-gradient(circle at top left, rgba(232, 76, 95, 0.13), transparent 55%),
-        radial-gradient(circle at bottom right, rgba(26,26,26,0.18), transparent 60%),
-        linear-gradient(135deg, #fafafa 0%, #f3f3f5 40%, #ececf0 100%);
-    padding: 2.5rem 1.5rem;
+    padding: 3rem 1.5rem;
     position: relative;
     overflow: hidden;
+    /* Rich light-mode background */
+    background:
+        radial-gradient(circle at top left, rgba(232, 76, 95, 0.20), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(26,26,26,0.20), transparent 60%),
+        linear-gradient(135deg, #fafafa 0%, #f3f3f5 40%, #ececf0 100%);
 }
 
-.auth-container::before {
-    content: '';
-    position: absolute;
-    top: -20%;
-    right: -10%;
-    width: 520px;
-    height: 520px;
-    background: radial-gradient(circle, rgba(210, 31, 60, 0.14) 0%, transparent 70%);
-    border-radius: 50%;
-    filter: blur(1px);
+/* Left hero section (used in login template, optional) */
+.auth-hero {
+    max-width: 420px;
+    color: #fff;
 }
 
-.auth-container::after {
-    content: '';
-    position: absolute;
-    bottom: -25%;
-    left: -10%;
-    width: 420px;
-    height: 420px;
-    background: radial-gradient(circle, rgba(210, 31, 60, 0.09) 0%, transparent 70%);
-    border-radius: 50%;
-    filter: blur(1px);
+/* Ensure auth layout centers nicely on small screens */
+@media (max-width: 991.98px) {
+    .auth-container {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1.25rem;
+    }
 }
 
+/* Auth card */
 .auth-card {
-    background: rgba(255,255,255,0.96);
+    background: rgba(255,255,255,0.97);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     border-radius: 18px;
-    padding: 3rem 3rem 2.25rem;
+    padding: 2.5rem 2.5rem 2rem;
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
     box-shadow:
         0 18px 50px rgba(0,0,0,0.18),
         0 0 0 1px rgba(255,255,255,0.9);
@@ -491,25 +489,23 @@ a:hover {
 }
 
 .auth-card-wide {
-    max-width: 700px;
+    max-width: 520px;
 }
 
 .auth-header {
-    text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.75rem;
 }
 
 .auth-logo {
-    height: 70px;
-    margin-bottom: 1rem;
+    height: 64px;
+    margin-bottom: 0.75rem;
 }
 
 .auth-title {
     color: var(--fml-black);
     font-weight: 700;
-    font-size: 1.85rem;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.35rem;
+    font-size: 1.9rem;
+    letter-spacing: 0.02em;
 }
 
 .auth-title span {
@@ -518,9 +514,10 @@ a:hover {
 
 .auth-subtitle {
     color: var(--fml-gray);
-    font-size: 0.95rem;
+    font-size: 0.96rem;
 }
 
+/* Input styling inside auth */
 .auth-form .form-label {
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -534,6 +531,7 @@ a:hover {
 }
 
 .auth-form .form-control {
+    border-radius: 0 6px 6px 0;
     border-left: none;
 }
 
@@ -543,16 +541,11 @@ a:hover {
     color: var(--fml-red-dark);
 }
 
-/* Help text etc. */
-.auth-form .form-text {
-    font-size: 0.8rem;
-    color: var(--fml-gray);
-}
-
+/* Auth footer */
 .auth-footer {
     text-align: center;
     margin-top: 1.5rem;
-    padding-top: 1.5rem;
+    padding-top: 1.2rem;
     border-top: 1px solid var(--fml-border);
     font-size: 0.88rem;
 }
@@ -568,7 +561,7 @@ a:hover {
     color: var(--fml-red-dark);
 }
 
-/* Subtle floating effect for the card */
+/* Small hover effect for card */
 .auth-card:hover {
     transform: translateY(-1px);
     box-shadow:
@@ -576,10 +569,22 @@ a:hover {
         0 0 0 1px rgba(255,255,255,0.95);
 }
 
-/* Button within auth */
+/* Buttons in auth */
 .auth-container .btn-fml-primary {
     font-weight: 600;
     letter-spacing: 0.02em;
+}
+
+/* Small-screen adjustments for auth */
+@media (max-width: 767.98px) {
+    .auth-card {
+        padding: 2.1rem 1.6rem 1.8rem;
+        max-width: 100%;
+    }
+
+    .auth-title {
+        font-size: 1.7rem;
+    }
 }
 
 /* ============ REQUISITION DOCUMENT ============ */
@@ -745,7 +750,7 @@ a:hover {
     color: var(--fml-red-dark);
 }
 
-/* ============ RESPONSIVE ============ */
+/* ============ RESPONSIVE (GENERAL) ============ */
 @media (max-width: 767.98px) {
     .sidebar {
         position: static;
@@ -758,10 +763,6 @@ a:hover {
         margin-left: 0;
         margin-top: 10px;
         padding: 0 15px;
-    }
-
-    .auth-card {
-        padding: 2.25rem 1.8rem 1.8rem;
     }
 
     .card-body {
@@ -794,14 +795,6 @@ a:hover {
 
     h2 {
         font-size: 1.5rem;
-    }
-
-    .auth-card {
-        padding: 2rem 1.4rem 1.6rem;
-    }
-
-    .auth-title {
-        font-size: 1.6rem;
     }
 }
 
@@ -1176,9 +1169,10 @@ a:hover {
     color: #adb5bd;
 }
 
-/* Auth in dark (match premium look) */
+/* Auth in dark */
 [data-bs-theme="dark"] .auth-container {
-    background: radial-gradient(circle at top left, #1f2328 0, #111417 35%, #050608 90%);
+    background:
+        radial-gradient(circle at top left, #1f2328 0, #111417 40%, #050608 90%);
 }
 
 [data-bs-theme="dark"] .auth-card {
