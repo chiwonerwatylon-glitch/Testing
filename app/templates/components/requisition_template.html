@@ -289,6 +289,13 @@
     </div>
     {% endif %}
 
+    {# ============ CONTROL BLOCK (passed by caller, printed after authorization) ============ #}
+    {% if caller is defined %}
+    <div class="req-control-block mt-4">
+        {{ caller() }}
+    </div>
+    {% endif %}
+
     {# ============ DOCUMENT SECURITY ============ #}
     {% if qr or signature_code %}
     <div class="req-security border border-2 border-dark rounded-0 p-3 mt-4">
