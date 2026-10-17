@@ -82,19 +82,15 @@ a:hover {
 }
 
 .navbar {
-    box-shadow: 0 2px 15px rgba(0,0,0,0.25);
-    padding: 0.75rem 1.5rem;
     z-index: 1030;
 }
 
 .navbar-brand {
     font-size: 1.3rem;
-    color: var(--fml-white) !important;
     font-weight: 600;
 }
 
 .navbar-brand span {
-    color: var(--fml-white);
     position: relative;
 }
 
@@ -108,13 +104,13 @@ a:hover {
     background: var(--fml-red);
 }
 
-.nav-link {
+.navbar-dark .nav-link {
     color: rgba(255,255,255,0.9) !important;
     font-weight: 500;
     transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.nav-link:hover {
+.navbar-dark .nav-link:hover {
     color: var(--fml-red-light) !important;
 }
 
