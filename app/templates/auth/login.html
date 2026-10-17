@@ -2,6 +2,7 @@
 <html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign in · First Mutual Life Requisition System</title>
 
@@ -31,8 +32,83 @@
         rel="stylesheet"
     >
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+    <style>
+        /* High-level layout to mimic Shopify-style central card on a subtle background */
+        html, body {
+            min-height: 100%;
+        }
+
+        body.auth-page {
+            background-color: #f6f6f7;
+            color: #202223;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1050;
+            width: 38px;
+            height: 38px;
+        }
+
+        .page-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-main {
+            flex: 1 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .login-shell {
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .login-card {
+            border-radius: 1rem;
+        }
+
+        .login-header-logo {
+            height: 32px;
+            width: auto;
+        }
+
+        .login-header {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-footer {
+            flex-shrink: 0;
+            padding: 1rem 0 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .login-footer a {
+            text-decoration: none;
+        }
+
+        .eyebrow {
+            letter-spacing: .08em;
+        }
+
+        @media (min-width: 992px) {
+            .page-main {
+                padding: 3rem 1.5rem;
+            }
+        }
+    </style>
 </head>
-<body class="bg-body-tertiary auth-page">
+<body class="auth-page">
 
     <button
         type="button"
@@ -44,82 +120,30 @@
         <i class="bi bi-moon-stars"></i>
     </button>
 
-    <div class="row g-0 min-vh-100">
+    <div class="page-container">
 
-        <!-- Brand panel -->
-        <aside class="auth-brand text-white d-none d-lg-flex flex-column justify-content-between p-5">
-            <div class="d-flex align-items-center gap-3">
-                <img
-                    src="{{ url_for('static', filename='images/logo.png') }}"
-                    alt="First Mutual Life logo"
-                    class="auth-logo"
-                    onerror="this.style.display='none'"
-                >
-                <span class="text-uppercase small fw-semibold text-white-50">
-                    First Mutual Life Assurance
-                </span>
-            </div>
+        <main class="page-main">
+            <div class="login-shell">
 
-            <div>
-                <h1 class="display-5 fw-bold lh-sm mb-3">
-                    Requisitions, approved with <span style="color:#ff6b7f;">confidence</span>.
-                </h1>
-                <p class="lead text-white-50 mb-5">
-                    One secure workspace for payment requisitions, from initiation through review and approval,
-                    with a full audit trail.
-                </p>
+                <!-- Top brand header, similar to Shopify's logo header -->
+                <header class="login-header text-center mb-3">
+                    <img
+                        src="{{ url_for('static', filename='images/logo.png') }}"
+                        alt="First Mutual Life"
+                        class="login-header-logo bg-white rounded p-1 shadow-sm"
+                        onerror="this.style.display='none'"
+                    >
+                </header>
 
-                <div class="d-flex align-items-start gap-3 mb-4">
-                    <span class="feature-icon">
-                        <i class="bi bi-person-check"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold">Role-based approvals</div>
-                        <div class="small text-white-50">
-                            Reviewers, approvers and senior sign-off in sequence.
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-start gap-3 mb-4">
-                    <span class="feature-icon">
-                        <i class="bi bi-shield-check"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold">Tamper-evident documents</div>
-                        <div class="small text-white-50">
-                            QR verification and document codes on every requisition.
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-start gap-3">
-                    <span class="feature-icon">
-                        <i class="bi bi-activity"></i>
-                    </span>
-                    <div>
-                        <div class="fw-semibold">Live status tracking</div>
-                        <div class="small text-white-50">
-                            Follow every requisition from draft to completion.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="small text-white-50">
-                &copy; {{ current_year or 2026 }} First Mutual Life Assurance Company (Zimbabwe)
-            </div>
-        </aside>
-
-        <!-- Sign-in form -->
-        <main class="auth-panel d-flex flex-column align-items-center justify-content-center p-4 p-md-5">
-            <div class="auth-card">
-                <div class="card border-0 shadow-lg rounded-4">
+                <div class="card border-0 shadow-lg rounded-4 login-card">
                     <div class="card-body p-4 p-md-5">
+
                         <p class="text-uppercase small fw-semibold text-danger mb-1 eyebrow">
                             Secure sign-in
                         </p>
-                        <h2 class="fw-bold mb-1">Welcome back</h2>
+                        <h2 class="fw-bold mb-1">Log in</h2>
                         <p class="text-body-secondary mb-4">
-                            Sign in with your corporate account.
+                            Continue to the First Mutual Life Requisition System.
                         </p>
 
                         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -209,12 +233,15 @@
                                 type="submit"
                                 class="btn btn-signin btn-lg w-100 py-3 text-white fw-semibold"
                             >
-                                <i class="bi bi-box-arrow-in-right me-2"></i>
-                                Sign in
+                                <span class="d-inline-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                    <span>Continue</span>
+                                </span>
                             </button>
                         </form>
 
                         <hr class="my-4">
+
                         <p class="text-center small text-body-secondary mb-0">
                             Need access?
                             <a
@@ -226,11 +253,21 @@
                         </p>
                     </div>
                 </div>
+
                 <p class="text-center small text-body-secondary mt-3 mb-0">
                     Authorised users only. Activity is logged.
                 </p>
             </div>
         </main>
+
+        <footer class="login-footer text-center text-body-secondary">
+            <div class="mb-1">
+                <a href="#" class="text-decoration-none">Need help?</a>
+            </div>
+            <div>
+                &copy; {{ current_year or 2026 }} First Mutual Life Assurance Company (Zimbabwe)
+            </div>
+        </footer>
     </div>
 
     <script
@@ -298,7 +335,7 @@
                     try {
                         localStorage.setItem('fml-theme', next);
                     } catch (e) {
-                        // Ignore storage errors (e.g. in private mode)
+                        // Ignore storage errors
                     }
                     syncIcon();
                 });
