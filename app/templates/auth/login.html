@@ -7,15 +7,29 @@
 
     <script>
         (function () {
-            var stored = localStorage.getItem('fml-theme');
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.setAttribute('data-bs-theme', stored || (prefersDark ? 'dark' : 'light'));
+            var stored = null;
+            try {
+                stored = localStorage.getItem('fml-theme');
+            } catch (e) {
+                stored = null;
+            }
+            var prefersDark = window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', theme);
         })();
     </script>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+    >
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 
     <style>
@@ -25,33 +39,73 @@
                 radial-gradient(700px 400px at 110% 110%, rgba(210, 31, 60, .25), transparent 60%),
                 linear-gradient(160deg, #0b0d10 0%, #111417 60%, #1a0d10 100%);
         }
-        .auth-logo { height: 52px; width: auto; background: #fff; border-radius: 10px; padding: 6px; }
+        .auth-logo {
+            height: 52px;
+            width: auto;
+            background: #fff;
+            border-radius: 10px;
+            padding: 6px;
+        }
         .feature-icon {
-            width: 40px; height: 40px; flex: 0 0 40px;
-            display: inline-flex; align-items: center; justify-content: center;
-            border-radius: .75rem; background: rgba(210, 31, 60, .15); color: #ff6b7f;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .75rem;
+            background: rgba(210, 31, 60, .15);
+            color: #ff6b7f;
         }
         .btn-signin {
             background: linear-gradient(135deg, #D21F3C 0%, #A01830 100%);
             border: 0;
             box-shadow: 0 10px 25px -10px rgba(210, 31, 60, .7);
         }
-        .btn-signin:hover, .btn-signin:focus { filter: brightness(1.06); color: #fff; }
-        .form-control:focus { border-color: #D21F3C; box-shadow: 0 0 0 .2rem rgba(210, 31, 60, .2); }
+        .btn-signin:hover,
+        .btn-signin:focus {
+            filter: brightness(1.06);
+            color: #fff;
+        }
+        .form-control:focus {
+            border-color: #D21F3C;
+            box-shadow: 0 0 0 .2rem rgba(210, 31, 60, .2);
+        }
         .auth-card { width: 100%; }
-        .auth-panel { flex: 0 0 100%; max-width: 100%; }
+        .auth-panel {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
         @media (min-width: 992px) {
-            .auth-panel { flex: 0 0 36%; max-width: 36%; }
-            .auth-brand { flex: 1 1 64%; min-width: 0; }
+            .auth-panel {
+                flex: 0 0 36%;
+                max-width: 36%;
+            }
+            .auth-brand {
+                flex: 1 1 64%;
+                min-width: 0;
+            }
         }
         .eyebrow { letter-spacing: .08em; }
-        .theme-toggle { position: fixed; top: 1rem; right: 1rem; z-index: 10; width: 38px; height: 38px; }
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            width: 38px;
+            height: 38px;
+        }
     </style>
 </head>
 <body class="bg-body-tertiary">
 
-    <button type="button" id="themeToggle" class="btn btn-outline-secondary rounded-circle theme-toggle d-inline-flex align-items-center justify-content-center"
-            aria-label="Switch dark / light mode" title="Switch dark / light mode">
+    <button
+        type="button"
+        id="themeToggle"
+        class="btn btn-outline-secondary rounded-circle theme-toggle d-inline-flex align-items-center justify-content-center"
+        aria-label="Switch dark / light mode"
+        title="Switch dark / light mode"
+    >
         <i class="bi bi-moon-stars"></i>
     </button>
 
@@ -60,9 +114,15 @@
         <!-- Brand panel -->
         <aside class="auth-brand text-white d-none d-lg-flex flex-column justify-content-between p-5">
             <div class="d-flex align-items-center gap-3">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="First Mutual Life logo"
-                     class="auth-logo" onerror="this.style.display='none'">
-                <span class="text-uppercase small fw-semibold text-white-50">First Mutual Life Assurance</span>
+                <img
+                    src="{{ url_for('static', filename='images/logo.png') }}"
+                    alt="First Mutual Life logo"
+                    class="auth-logo"
+                    onerror="this.style.display='none'"
+                >
+                <span class="text-uppercase small fw-semibold text-white-50">
+                    First Mutual Life Assurance
+                </span>
             </div>
 
             <div>
@@ -70,28 +130,41 @@
                     Requisitions, approved with <span style="color:#ff6b7f;">confidence</span>.
                 </h1>
                 <p class="lead text-white-50 mb-5">
-                    One secure workspace for payment requisitions, from initiation through review and approval, with a full audit trail.
+                    One secure workspace for payment requisitions, from initiation through review and approval,
+                    with a full audit trail.
                 </p>
 
                 <div class="d-flex align-items-start gap-3 mb-4">
-                    <span class="feature-icon"><i class="bi bi-person-check"></i></span>
+                    <span class="feature-icon">
+                        <i class="bi bi-person-check"></i>
+                    </span>
                     <div>
                         <div class="fw-semibold">Role-based approvals</div>
-                        <div class="small text-white-50">Reviewers, approvers and senior sign-off in sequence.</div>
+                        <div class="small text-white-50">
+                            Reviewers, approvers and senior sign-off in sequence.
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex align-items-start gap-3 mb-4">
-                    <span class="feature-icon"><i class="bi bi-shield-check"></i></span>
+                    <span class="feature-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </span>
                     <div>
                         <div class="fw-semibold">Tamper-evident documents</div>
-                        <div class="small text-white-50">QR verification and document codes on every requisition.</div>
+                        <div class="small text-white-50">
+                            QR verification and document codes on every requisition.
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex align-items-start gap-3">
-                    <span class="feature-icon"><i class="bi bi-activity"></i></span>
+                    <span class="feature-icon">
+                        <i class="bi bi-activity"></i>
+                    </span>
                     <div>
                         <div class="fw-semibold">Live status tracking</div>
-                        <div class="small text-white-50">Follow every requisition from draft to completion.</div>
+                        <div class="small text-white-50">
+                            Follow every requisition from draft to completion.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -106,73 +179,140 @@
             <div class="auth-card">
                 <div class="card border-0 shadow-lg rounded-4">
                     <div class="card-body p-4 p-md-5">
-                        <p class="text-uppercase small fw-semibold text-danger mb-1 eyebrow">Secure sign-in</p>
+                        <p class="text-uppercase small fw-semibold text-danger mb-1 eyebrow">
+                            Secure sign-in
+                        </p>
                         <h2 class="fw-bold mb-1">Welcome back</h2>
-                        <p class="text-body-secondary mb-4">Sign in with your corporate account.</p>
+                        <p class="text-body-secondary mb-4">
+                            Sign in with your corporate account.
+                        </p>
 
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show small" role="alert" data-autodismiss>
+                                <div
+                                    class="alert alert-{{ category }} alert-dismissible fade show small"
+                                    role="alert"
+                                    data-autodismiss
+                                >
                                     {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    <button
+                                        type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Close"
+                                    ></button>
                                 </div>
                             {% endfor %}
                         {% endwith %}
 
-                        <form method="POST" class="needs-validation" novalidate>
+                        <form method="post" class="needs-validation" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="mb-3">
-                                <input type="email" class="form-control form-control-lg" id="email" name="email"
-                                       placeholder="yourname@firstmutual.co.zw" aria-label="Corporate email" required autocomplete="email">
-                                <div class="invalid-feedback">Enter a valid corporate email address.</div>
+                                <label class="visually-hidden" for="email">Corporate email</label>
+                                <input
+                                    type="email"
+                                    class="form-control form-control-lg"
+                                    id="email"
+                                    name="email"
+                                    placeholder="yourname@firstmutual.co.zw"
+                                    aria-label="Corporate email"
+                                    required
+                                    autocomplete="email"
+                                >
+                                <div class="invalid-feedback">
+                                    Enter a valid corporate email address.
+                                </div>
                             </div>
 
                             <div class="mb-3">
+                                <label class="visually-hidden" for="password">Password</label>
                                 <div class="input-group input-group-lg">
-                                    <input type="password" class="form-control" id="password" name="password"
-                                           placeholder="Password" aria-label="Password" required autocomplete="current-password">
-                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword"
-                                            aria-label="Show password"><i class="bi bi-eye"></i></button>
-                                    <div class="invalid-feedback">Enter your password.</div>
+                                    <input
+                                        type="password"
+                                        class="form-control"
+                                        id="password"
+                                        name="password"
+                                        placeholder="Password"
+                                        aria-label="Password"
+                                        required
+                                        autocomplete="current-password"
+                                    >
+                                    <button
+                                        class="btn btn-outline-secondary"
+                                        type="button"
+                                        id="togglePassword"
+                                        aria-label="Show password"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <div class="invalid-feedback">
+                                        Enter your password.
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                                    <label class="form-check-label" for="remember">Keep me signed in</label>
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="remember"
+                                        name="remember"
+                                    >
+                                    <label class="form-check-label" for="remember">
+                                        Keep me signed in
+                                    </label>
                                 </div>
-                                <span class="small text-body-secondary"><i class="bi bi-lock-fill me-1"></i>Encrypted connection</span>
+                                <span class="small text-body-secondary">
+                                    <i class="bi bi-lock-fill me-1"></i>
+                                    Encrypted connection
+                                </span>
                             </div>
 
-                            <button type="submit" class="btn btn-signin btn-lg w-100 py-3 text-white fw-semibold">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>Sign in
+                            <button
+                                type="submit"
+                                class="btn btn-signin btn-lg w-100 py-3 text-white fw-semibold"
+                            >
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Sign in
                             </button>
                         </form>
 
                         <hr class="my-4">
                         <p class="text-center small text-body-secondary mb-0">
                             Need access?
-                            <a href="{{ url_for('auth.register') }}" class="fw-semibold text-danger text-decoration-none">Request an account</a>
+                            <a
+                                href="{{ url_for('auth.register') }}"
+                                class="fw-semibold text-danger text-decoration-none"
+                            >
+                                Request an account
+                            </a>
                         </p>
                     </div>
                 </div>
-                <p class="text-center small text-body-secondary mt-3 mb-0">Authorised users only. Activity is logged.</p>
+                <p class="text-center small text-body-secondary mt-3 mb-0">
+                    Authorised users only. Activity is logged.
+                </p>
             </div>
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"
+    ></script>
     <script>
         (function () {
             'use strict';
 
-            // Status messages (e.g. "You have been logged out.") disappear after 2 seconds
+            // Status messages auto-dismiss
             document.querySelectorAll('[data-autodismiss]').forEach(function (alert) {
                 setTimeout(function () {
-                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                    if (window.bootstrap && bootstrap.Alert) {
+                        bootstrap.Alert.getOrCreateInstance(alert).close();
+                    }
                 }, 2000);
             });
 
@@ -184,7 +324,10 @@
                     var show = pwd.type === 'password';
                     pwd.type = show ? 'text' : 'password';
                     this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-                    this.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+                    var icon = this.querySelector('i');
+                    if (icon) {
+                        icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+                    }
                 });
             }
 
@@ -204,14 +347,24 @@
             var themeBtn = document.getElementById('themeToggle');
             function syncIcon() {
                 var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-                themeBtn.querySelector('i').className = dark ? 'bi bi-sun' : 'bi bi-moon-stars';
+                if (themeBtn) {
+                    var icon = themeBtn.querySelector('i');
+                    if (icon) {
+                        icon.className = dark ? 'bi bi-sun' : 'bi bi-moon-stars';
+                    }
+                }
             }
             if (themeBtn) {
                 syncIcon();
                 themeBtn.addEventListener('click', function () {
-                    var next = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+                    var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                    var next = current === 'dark' ? 'light' : 'dark';
                     document.documentElement.setAttribute('data-bs-theme', next);
-                    localStorage.setItem('fml-theme', next);
+                    try {
+                        localStorage.setItem('fml-theme', next);
+                    } catch (e) {
+                        // Ignore storage errors (e.g. in private mode)
+                    }
                     syncIcon();
                 });
             }
@@ -219,4 +372,3 @@
     </script>
 </body>
 </html>
-
