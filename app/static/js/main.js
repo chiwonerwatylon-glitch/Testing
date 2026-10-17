@@ -68,7 +68,71 @@ function fetchStats() {
 function formatCurrency(amount, currency = 'USD') {
     const symbols = {
         'USD': '$',
-        'ZWL': 'ZWL$',
+        'ZWG': 'ZWG$',
+        'ZAR': 'R',
+        'BWP': 'P'
+    };
+    const symbol = symbols[currency] || currency;
+    return `${symbol}${parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+/**
+ * Show loading spinner
+ */
+function showLoading() {
+    const overlay = document.createElement('div');
+    overlay.className = 'spinner-overlay';
+    overlay.id = 'loadingSpinner';
+    overlay.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Processing...</p>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingSpinner');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+/**
+ * Show loading on form submit for downloads
+ */
+document.addEventListener('click', function(e) {
+    if (e.target.closest('a[href*="/download/"]')) {
+        showLoading();
+        setTimeout(hideLoading, 3000);
+    }
+});
+
+/**
+ * Validate file size before upload
+ */
+function validateFileSize(input, maxSizeMB = 5) {
+    if (input.files && input.files[0]) {
+        const fileSize = input.files[0].size / 1024 / 1024; // MB
+        if (fileSize > maxSizeMB) {
+            alert(`File size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+            input.value = '';
+            return false;
+        }
+    }
+    return true;
+}
+
+// Apply file size validation to all signature inputs
+document.querySelectorAll('input[type="file"][name="signature"]').forEach(input => {
+    input.addEventListener('change', function() {
+        validateFileSize(this, 5);
+    });
+});
+,
         'ZAR': 'R',
         'BWP': 'P'
     };

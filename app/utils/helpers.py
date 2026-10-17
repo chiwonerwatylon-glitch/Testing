@@ -40,7 +40,37 @@ def format_currency(amount, currency='USD'):
     """Format amount with currency symbol"""
     symbols = {
         'USD': '$',
-        'ZWL': 'ZWL$',
+        'ZWG': 'ZWG$',
+        'ZAR': 'R',
+        'BWP': 'P'
+    }
+    symbol = symbols.get(currency, currency)
+    return f"{symbol}{amount:,.2f}"
+
+def get_status_badge_class(status):
+    """Return Bootstrap badge class for status"""
+    classes = {
+        'draft': 'bg-secondary',
+        'pending_review': 'bg-info',
+        'pending_approval': 'bg-warning',
+        'partially_approved': 'bg-primary',
+        'approved': 'bg-success',
+        'rejected': 'bg-danger'
+    }
+    return classes.get(status, 'bg-secondary')
+
+def get_status_display(status):
+    """Return human-readable status"""
+    displays = {
+        'draft': 'Draft',
+        'pending_review': 'Pending Review',
+        'pending_approval': 'Pending Approval',
+        'partially_approved': 'Partially Approved',
+        'approved': 'Approved',
+        'rejected': 'Rejected'
+    }
+    return displays.get(status, status.title())
+,
         'ZAR': 'R',
         'BWP': 'P'
     }
