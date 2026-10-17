@@ -124,43 +124,42 @@ def logout():
 @auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    """Profile page. Regular users may only change their own password here.
+
+    Signature and all other profile fields are admin-managed (see admin.user_edit)
+    and are deliberately ignored if submitted to this route.
+    """
     if request.method == 'POST':
-        current_user.phone = request.form.get('phone')
-        current_user.position = request.form.get('position')
-        
-        # Handle signature upload
-        if 'signature' in request.files:
-            file = request.files['signature']
-            if file and file.filename:
-                # Delete old signature if exists
-                if current_user.signature_path:
-                    old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], current_user.signature_path)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                
-                signature_filename = save_signature(file, current_user.employee_id)
-                if signature_filename:
-                    current_user.signature_path = signature_filename
-        
-        # Handle password change
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_new_password = request.form.get('confirm_new_password')
-        
-        if current_password and new_password:
-            if not current_user.check_password(current_password):
-                flash('Current password is incorrect.', 'danger')
-                return render_template('auth/profile.html')
-            
-            if new_password != confirm_new_password:
-                flash('New passwords do not match.', 'danger')
-                return render_template('auth/profile.html')
-            
-            current_user.set_password(new_password)
-            flash('Password updated successfully.', 'success')
-        
+
+        if not current_password or not new_password or not confirm_new_password:
+            flash('Please fill in the current password, new password and confirmation.', 'danger')
+            return render_template('auth/profile.html')
+
+        if not current_user.check_password(current_password):
+            flash('Current password is incorrect.', 'danger')
+            return render_template('auth/profile.html')
+
+        if new_password != confirm_new_password:
+            flash('New passwords do not match.', 'danger')
+            return render_template('auth/profile.html')
+
+        current_user.set_password(new_password)
+
+        audit = AuditLog(
+            user_id=current_user.id,
+            action='change_password',
+            entity_type='user',
+            entity_id=current_user.id,
+            details='User changed their password',
+            ip_address=request.remote_addr
+        )
+        db.session.add(audit)
         db.session.commit()
-        flash('Profile updated successfully.', 'success')
+
+        flash('Password updated successfully.', 'success')
         return redirect(url_for('auth.profile'))
-    
+
     return render_template('auth/profile.html')
