@@ -9,8 +9,17 @@
         <a class="navbar-brand d-flex align-items-center gap-2 fw-semibold" href="{{ url_for('requisition.dashboard') }}">
             <img src="{{ url_for('static', filename='images/logo.png') }}" alt="First Mutual Life" height="36"
                  class="rounded bg-white p-1" onerror="this.style.display='none'">
-            <span>First Mutual <span class="text-brand">Life</span></span>
+            <span class="d-none d-sm-inline">First Mutual <span class="text-brand">Life</span></span>
         </a>
+
+        <form method="get" action="{{ url_for('requisition.search') }}" role="search"
+              class="mx-auto flex-grow-1 d-none d-md-flex" style="max-width: 520px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="search" name="q" class="form-control" placeholder="Search requisitions"
+                       aria-label="Search requisitions" value="{{ request.args.get('q', '') }}">
+            </div>
+        </form>
 
         <div class="ms-auto d-flex align-items-center gap-2">
             <button type="button" id="themeToggle" class="btn btn-outline-secondary btn-sm rounded-circle"
