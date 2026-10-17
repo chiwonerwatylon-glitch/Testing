@@ -1,19 +1,36 @@
 {% from 'components/requisition_template.html' import render_requisition_document %}
 <!DOCTYPE html>
-<html>
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Requisition {{ requisition.requisition_number }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <style>
-        @media print { .no-print { display: none !important; } }
+        @page { size: A4; margin: 12mm; }
+        html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @media print { .no-print { display: none !important; } .card { box-shadow: none !important; border: 0 !important; } }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <div class="no-print mb-3"><button class="btn btn-dark" onclick="window.print()">Print</button></div>
-        {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
+    <div class="container-fluid py-4">
+        <div class="no-print mb-3 text-end"><button type="button" class="btn btn-dark" onclick="window.print()"><i class="bi bi-printer me-2"></i>Print</button></div>
+        {% if workflow %}
+        <section class="mb-3">
+            <ul class="list-unstyled">
+                {% for stage in workflow %}
+                <li>{{ stage.label }}: {{ stage.completed_by or 'Pending' }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+        <div class="card shadow-sm requisition-document">
+            <div class="card-body p-4 p-md-5">
+                {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
+            </div>
+        </div>
     </div>
 </body>
 </html>
