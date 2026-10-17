@@ -1,115 +1,218 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard - FML Requisition System{% endblock %}
+{% block title %}Admin Dashboard – FML Requisition System{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h2 class="mb-4"><i class="bi bi-shield-lock me-2"></i>Admin Dashboard</h2>
-    
+
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="mb-1 d-flex align-items-center">
+                <span class="stat-icon bg-primary bg-opacity-10 me-2">
+                    <i class="bi bi-shield-lock text-primary"></i>
+                </span>
+                <span class="fw-semibold">Admin Dashboard</span>
+            </h2>
+            <p class="text-muted mb-0 small">
+                Central overview of users, access and requisition activity across the FML Requisition System.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-people me-1"></i> Manage Users
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-journal-text me-1"></i> View Audit Logs
+            </a>
+        </div>
+    </div>
+
     <!-- Statistics -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-primary border-4 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Total Users</h6>
-                    <h2 class="mb-0">{{ stats.total_users }}</h2>
+    <div class="row mb-4 g-3">
+        <!-- Total Users -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card border-0 h-100 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1 small">Total Users</h6>
+                        <h2 class="mb-0 fw-semibold">{{ stats.total_users }}</h2>
+                    </div>
+                    <div class="stat-icon bg-primary bg-opacity-10">
+                        <i class="bi bi-people text-primary"></i>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-success border-4 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Active Users</h6>
-                    <h2 class="mb-0">{{ stats.active_users }}</h2>
+
+        <!-- Active Users -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card border-0 h-100 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1 small">Active Users</h6>
+                        <h2 class="mb-0 fw-semibold text-success">{{ stats.active_users }}</h2>
+                    </div>
+                    <div class="stat-icon bg-success bg-opacity-10">
+                        <i class="bi bi-person-check text-success"></i>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-warning border-4 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Pending Approval</h6>
-                    <h2 class="mb-0">{{ stats.pending_users }}</h2>
+
+        <!-- Pending Approval -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card border-0 h-100 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1 small">Pending Approval</h6>
+                        <h2 class="mb-0 fw-semibold text-warning">{{ stats.pending_users }}</h2>
+                    </div>
+                    <div class="stat-icon bg-warning bg-opacity-10">
+                        <i class="bi bi-person-exclamation text-warning"></i>
+                    </div>
                 </div>
                 {% if stats.pending_users > 0 %}
-                <a href="{{ url_for('admin.users', status='inactive') }}" class="card-footer text-warning small">
-                    Review Now <i class="bi bi-arrow-right ms-1"></i>
-                </a>
+                <div class="card-footer bg-transparent border-0 pt-0">
+                    <a
+                        href="{{ url_for('admin.users', status='inactive') }}"
+                        class="small text-warning text-decoration-none d-inline-flex align-items-center"
+                    >
+                        Review now
+                        <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stat-card border-start border-info border-4 h-100">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Total Requisitions</h6>
-                    <h2 class="mb-0">{{ stats.total_requisitions }}</h2>
+
+        <!-- Total Requisitions -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card stat-card border-0 h-100 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1 small">Total Requisitions</h6>
+                        <h2 class="mb-0 fw-semibold">{{ stats.total_requisitions }}</h2>
+                    </div>
+                    <div class="stat-icon bg-info bg-opacity-10">
+                        <i class="bi bi-file-text text-info"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="row">
+
+    <!-- Lower row: Recent Users & Activity -->
+    <div class="row g-4">
         <!-- Recent Users -->
-        <div class="col-md-6 mb-4">
+        <div class="col-md-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Recent Users</h5>
-                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <div class="card-header d-flex justify-content-between align-items-center recent-header">
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="bi bi-people me-2 text-fml-primary"></i>
+                        Recent Users
+                    </h5>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">
+                        View all
+                    </a>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <tbody>
-                            {% for user in recent_users %}
-                            <tr>
-                                <td>
-                                    <strong>{{ user.full_name }}</strong><br>
-                                    <small class="text-muted">{{ user.email }}</small>
-                                </td>
-                                <td>
-                                    {% if user.is_active %}
-                                    <span class="badge bg-success">Active</span>
-                                    {% else %}
-                                    <span class="badge bg-warning">Pending</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('admin.user_edit', id=user.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle recent-table">
+                            <tbody>
+                                {% for user in recent_users %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold">{{ user.full_name }}</span>
+                                            <small class="text-muted">{{ user.email }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a
+                                            href="{{ url_for('admin.user_edit', id=user.id) }}"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-title="Edit user"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox me-1"></i>
+                                        No recent users.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Recent Activity -->
-        <div class="col-md-6 mb-4">
+        <div class="col-md-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Activity</h5>
-                    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <div class="card-header d-flex justify-content-between align-items-center recent-header">
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="bi bi-activity me-2 text-fml-primary"></i>
+                        Recent Activity
+                    </h5>
+                    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-outline-primary">
+                        View all
+                    </a>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <tbody>
-                            {% for log in recent_audits %}
-                            <tr>
-                                <td>
-                                    <strong>{{ log.user.full_name if log.user else 'System' }}</strong><br>
-                                    <small class="text-muted">{{ log.action.replace('_', ' ').title() }}</small>
-                                </td>
-                                <td class="text-end">
-                                    <small class="text-muted">{{ log.created_at.strftime('%m/%d %H:%M') }}</small>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle recent-table">
+                            <tbody>
+                                {% for log in recent_audits %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold">
+                                                {{ log.user.full_name if log.user else 'System' }}
+                                            </span>
+                                            <small class="text-muted">
+                                                {{ log.action.replace('_', ' ').title() }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <small class="text-muted">
+                                            {{ log.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox me-1"></i>
+                                        No recent activity.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+
+
+
