@@ -29,10 +29,12 @@
 
     {# ============ HEADER ============ #}
     <div class="req-doc-header text-center mb-4">
-        <img src="{{ url_for('static', filename='images/logo.png') }}"
-             alt="First Mutual Life Logo"
-             class="req-doc-logo mb-2"
-             onerror="this.style.display='none'">
+        <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="First Mutual Life Logo"
+            class="req-doc-logo mb-2"
+            onerror="this.style.display='none'"
+        >
 
         <h2 class="fml-title mb-1">FIRST MUTUAL LIFE ASSURANCE COMPANY</h2>
         <h4 class="text-muted fw-normal mb-2">PAYMENT REQUISITION</h4>
@@ -84,7 +86,9 @@
                     <tr>
                         <td class="req-label">ITF 263:</td>
                         <td class="req-value">
-                            <span class="badge bg-light text-dark border">{{ requisition.itf_263 }}</span>
+                            <span class="badge bg-light text-dark border">
+                                {{ requisition.itf_263 }}
+                            </span>
                         </td>
                     </tr>
                     <tr>
@@ -159,22 +163,26 @@
     {# ============ APPROVAL PROGRESS ============ #}
     {% if show_progress and requisition.status in ['pending_approval', 'partially_approved', 'approved'] %}
         {% if requisition.required_approvals %}
-            {% set progress_pct =
-                (requisition.current_approvals / requisition.required_approvals * 100)
-                | round
-                | int
-            %}
+            {% set progress_pct = (
+                requisition.current_approvals / requisition.required_approvals * 100
+            ) | round | int %}
         {% else %}
             {% set progress_pct = 0 %}
         {% endif %}
         <div class="mb-4 no-print">
             <h5 class="req-section-heading">
-                <i class="bi bi-check2-square me-2"></i>Approval Progress
+                <i class="bi bi-check2-square me-2"></i>
+                Approval Progress
             </h5>
             <div class="progress" style="height: 25px;">
-                <div class="progress-bar bg-success"
-                     role="progressbar"
-                     style="width: {{ progress_pct }}%">
+                <div
+                    class="progress-bar bg-success"
+                    role="progressbar"
+                    style="width: {{ progress_pct }}%"
+                    aria-valuenow="{{ progress_pct }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                >
                     {{ requisition.current_approvals }}/{{ requisition.required_approvals }} Approved
                 </div>
             </div>
@@ -185,7 +193,8 @@
 
     {# ============ AUTHORIZATION / SIGNATURES ============ #}
     <h5 class="req-section-heading mb-4">
-        <i class="bi bi-pen me-2"></i>AUTHORIZATION
+        <i class="bi bi-pen me-2"></i>
+        AUTHORIZATION
     </h5>
 
     {% set approval_ordinals = ['1st', '2nd', '3rd'] %}
@@ -207,9 +216,11 @@
                     <td>{{ requisition.initiator.full_name }}</td>
                     <td>
                         {% if requisition.initiator_signature %}
-                            <img src="{{ url_for('static', filename='signatures/' + requisition.initiator_signature) }}"
-                                 class="req-sig-img"
-                                 alt="Initiator signature">
+                            <img
+                                src="{{ url_for('static', filename='signatures/' ~ requisition.initiator_signature) }}"
+                                class="req-sig-img"
+                                alt="Initiator signature"
+                            >
                         {% else %}
                             <span class="req-sig-placeholder">________________</span>
                         {% endif %}
@@ -227,9 +238,11 @@
                     <td>{{ requisition.reviewer.full_name if requisition.reviewer else 'Pending' }}</td>
                     <td>
                         {% if requisition.reviewer_signature %}
-                            <img src="{{ url_for('static', filename='signatures/' + requisition.reviewer_signature) }}"
-                                 class="req-sig-img"
-                                 alt="Reviewer signature">
+                            <img
+                                src="{{ url_for('static', filename='signatures/' ~ requisition.reviewer_signature) }}"
+                                class="req-sig-img"
+                                alt="Reviewer signature"
+                            >
                         {% else %}
                             <span class="req-sig-placeholder">________________</span>
                         {% endif %}
@@ -259,9 +272,11 @@
                         <td>{{ log.approver.full_name if log else 'Pending' }}</td>
                         <td>
                             {% if log and log.signature_path %}
-                                <img src="{{ url_for('static', filename='signatures/' + log.signature_path) }}"
-                                     class="req-sig-img"
-                                     alt="Approver signature">
+                                <img
+                                    src="{{ url_for('static', filename='signatures/' ~ log.signature_path) }}"
+                                    class="req-sig-img"
+                                    alt="Approver signature"
+                                >
                             {% else %}
                                 <span class="req-sig-placeholder">________________</span>
                             {% endif %}
@@ -301,7 +316,8 @@
     <div class="req-security border border-2 border-dark rounded-0 p-3 mt-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="fw-bold text-uppercase small">
-                <i class="bi bi-shield-lock me-1"></i>Document security
+                <i class="bi bi-shield-lock me-1"></i>
+                Document security
             </span>
             <span class="small text-muted">Tamper-evident record</span>
         </div>
@@ -363,4 +379,3 @@
 
 </div>
 {% endmacro %}
-
