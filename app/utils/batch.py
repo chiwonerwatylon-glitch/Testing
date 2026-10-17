@@ -15,6 +15,13 @@ def money(value):
     return Decimal(str(value or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
+def net_amount(requisition):
+    """Net payment amount: total credit minus total debit, as a 2 dp Decimal."""
+    credit = Decimal(str(requisition.total_credit or 0))
+    debit = Decimal(str(requisition.total_debit or 0))
+    return money(credit - debit)
+
+
 def payment_code(requisition):
     """'Code' column: the account code of the first line item on the requisition."""
     first = requisition.items.first()
@@ -49,7 +56,7 @@ def batch_row(requisition, reference, account_name, code):
         account_name or requisition.in_favor_of or '',           # Account Name
         account_number_text(requisition),                        # Account Number, text
         code or payment_code(requisition),                       # Code
-        money(requisition.total_debit),                          # Amount, 2 dp
+        net_amount(requisition),                                 # Amount, credit minus debit, 2 dp
         reference or requisition.requisition_number,             # Reference
         requisition.currency or '',                              # Currency Code
         requisition.branch or '',                                # Branch Name

@@ -2,6 +2,22 @@
 
 {% block title %}Batches · First Mutual Life{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Keep the batch controls interactive regardless of table or theme styles */
+    #batchForm .batch-check,
+    #batchForm input[type="text"],
+    #batchForm #selectAll {
+        pointer-events: auto;
+        position: relative;
+        z-index: 1;
+        user-select: auto;
+    }
+    #batchForm input[type="text"] { cursor: text; }
+    #batchForm .batch-check, #batchForm #selectAll { cursor: pointer; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mb-4">
     <h2 class="fw-bold mb-1">Payment batches</h2>
@@ -78,7 +94,7 @@
                                     <input type="text" class="form-control form-control-sm font-monospace" name="code_{{ r.id }}"
                                            value="{{ code }}" maxlength="50" aria-label="Code for {{ r.requisition_number }}">
                                 </td>
-                                <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
+                                <td class="text-end font-monospace">{{ '{:,.2f}'.format(net_amount(r)) }}</td>
                                 <td>{{ r.currency }}</td>
                                 <td>{{ r.branch }}</td>
                                 <td><span class="badge rounded-pill text-bg-warning">Pending batch</span></td>
@@ -144,7 +160,7 @@
                             <td>{{ name }}</td>
                             <td class="font-monospace">{{ r.account_number }}</td>
                             <td class="font-monospace">{{ code }}</td>
-                            <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
+                            <td class="text-end font-monospace">{{ '{:,.2f}'.format(net_amount(r)) }}</td>
                             <td>{{ r.currency }}</td>
                             <td>{{ r.branch }}</td>
                             <td><span class="badge rounded-pill text-bg-success">Batched</span></td>
@@ -170,6 +186,14 @@
         var selectAll = document.getElementById('selectAll');
         var checks = document.querySelectorAll('.batch-check');
         var form = document.getElementById('batchForm');
+        if (form) {
+            // Make sure every editable control is enabled and writable
+            form.querySelectorAll('.batch-check, input[type="text"]').forEach(function (el) {
+                el.disabled = false;
+                el.removeAttribute('disabled');
+                el.removeAttribute('readonly');
+            });
+        }
         if (selectAll) {
             selectAll.addEventListener('change', function () {
                 checks.forEach(function (c) { c.checked = selectAll.checked; });

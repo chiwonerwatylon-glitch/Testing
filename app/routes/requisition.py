@@ -716,7 +716,7 @@ def _batch_response(batch, rows, fmt):
 @active_user_required
 def batches():
     from app.models import RequisitionBatch, BatchItem
-    from app.utils.batch import payment_code, default_reference, default_account_name
+    from app.utils.batch import payment_code, default_reference, default_account_name, net_amount
     if not _can_batch():
         flash('You do not have access to batching.', 'warning')
         return redirect(url_for('requisition.dashboard'))
@@ -731,7 +731,7 @@ def batches():
                 for bi in batch.items]
         history.append((batch, rows))
     return render_template('requisition/batches.html', pending=pending, history=history,
-                           batched_count=BatchItem.query.count())
+                           batched_count=BatchItem.query.count(), net_amount=net_amount)
 
 
 @requisition_bp.route('/batches/create', methods=['POST'])
@@ -741,7 +741,7 @@ def batch_create():
     from sqlalchemy.exc import IntegrityError
     from decimal import Decimal
     from app.models import RequisitionBatch, BatchItem
-    from app.utils.batch import money, clean_text, default_reference, default_account_name, payment_code
+    from app.utils.batch import net_amount, clean_text, default_reference, default_account_name, payment_code
     if not _can_batch():
         flash('You do not have access to batching.', 'warning')
         return redirect(url_for('requisition.dashboard'))
@@ -769,7 +769,7 @@ def batch_create():
         code = clean_text(request.form.get(f'code_{r.id}'), payment_code(r), 50)
         rows.append((r, reference, account_name, code))
 
-    total = sum((money(r.total_debit) for r in requisitions), Decimal('0.00'))
+    total = sum((net_amount(r) for r in requisitions), Decimal('0.00'))
     batch = RequisitionBatch(batch_number=_next_batch_number(), currency=requisitions[0].currency,
                              row_count=len(requisitions), total_amount=float(total),
                              created_by_id=current_user.id)
