@@ -48,6 +48,8 @@
 {% block extra_js %}
 <script>
 (function () {
+    'use strict';
+
     var form = document.getElementById('assistant-form');
     var btn = document.getElementById('ask-btn');
     var box = document.getElementById('answer-box');
@@ -63,7 +65,7 @@
     form.addEventListener('submit', function (e) {
         e.preventDefault();
 
-        var question = questionEl.value.trim();
+        var question = (questionEl.value || '').trim();
         if (!question) {
             return;
         }
@@ -92,7 +94,7 @@
             var data = result.data || {};
             if (result.ok && data.answer) {
                 answerEl.textContent = data.answer;
-                var sources = data.sources || [];
+                var sources = Array.isArray(data.sources) ? data.sources : [];
                 sourcesEl.textContent = sources.length
                     ? 'Sources: ' + sources.join(', ')
                     : '';
