@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Batches · First Mutual Life{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-1">Payment batches</h2>
+    <p class="text-body-secondary mb-0">Approved requisitions prepared for upload to Stanbic Business Online.</p>
+</div>
+
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab" aria-selected="true">
+            Pending batch <span class="badge rounded-pill text-bg-warning ms-1">{{ pending|length }}</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="batched-tab" data-bs-toggle="tab" data-bs-target="#batched-pane" type="button" role="tab" aria-selected="false">
+            Batched <span class="badge rounded-pill text-bg-success ms-1">{{ batched_count }}</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Pending batch -->
+    <div class="tab-pane fade show active" id="pending-pane" role="tabpanel" aria-labelledby="pending-tab">
+        {% if pending %}
+        <form method="post" action="{{ url_for('requisition.batch_create') }}" id="batchForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="selectAll">
+                        <label class="form-check-label fw-semibold" for="selectAll">Select all</label>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" name="format" value="csv" class="btn btn-brand">
+                            <i class="bi bi-filetype-csv me-2"></i>Download batch CSV
+                        </button>
+                        <button type="submit" name="format" value="xlsx" class="btn btn-outline-success">
+                            <i class="bi bi-file-earmark-excel me-2"></i>Download batch Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col"><span class="visually-hidden">Select</span></th>
+                                <th scope="col">Reference</th>
+                                <th scope="col">Account name</th>
+                                <th scope="col">Account number</th>
+                                <th scope="col">Code</th>
+                                <th scope="col" class="text-end">Amount</th>
+                                <th scope="col">Currency</th>
+                                <th scope="col">Branch</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r, code in pending %}
+                            <tr>
+                                <td>
+                                    <input class="form-check-input batch-check" type="checkbox" name="ids" value="{{ r.id }}"
+                                           data-currency="{{ r.currency }}" aria-label="Select {{ r.requisition_number }}">
+                                </td>
+                                <td class="fw-semibold">{{ r.requisition_number }}</td>
+                                <td>{{ r.in_favor_of }}</td>
+                                <td class="font-monospace">{{ r.account_number }}</td>
+                                <td class="font-monospace">{{ code }}</td>
+                                <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
+                                <td>{{ r.currency }}</td>
+                                <td>{{ r.branch }}</td>
+                                <td><span class="badge rounded-pill text-bg-warning">Pending batch</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-body small text-body-secondary">
+                    Each batch holds one currency. Downloading a batch marks its payments as batched.
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5 text-body-secondary">
+                <i class="bi bi-check2-all fs-1 d-block mb-2"></i>
+                No approved requisitions are waiting for batching.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Batched -->
+    <div class="tab-pane fade" id="batched-pane" role="tabpanel" aria-labelledby="batched-tab">
+        {% for batch, rows in history %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                <div>
+                    <h5 class="mb-0 fw-semibold">{{ batch.batch_number }}</h5>
+                    <div class="small text-body-secondary">
+                        {{ batch.created_at.strftime('%d %b %Y %H:%M') }} &middot; {{ batch.created_by.full_name }}
+                        &middot; {{ batch.row_count }} payment(s) &middot; {{ batch.currency }} {{ '{:,.2f}'.format(batch.total_amount) }}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('requisition.batch_download', id=batch.id, fmt='csv') }}">
+                        <i class="bi bi-filetype-csv me-1"></i>CSV
+                    </a>
+                    <a class="btn btn-sm btn-outline-success" href="{{ url_for('requisition.batch_download', id=batch.id, fmt='xlsx') }}">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                    </a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Reference</th>
+                            <th scope="col">Account name</th>
+                            <th scope="col">Account number</th>
+                            <th scope="col">Code</th>
+                            <th scope="col" class="text-end">Amount</th>
+                            <th scope="col">Currency</th>
+                            <th scope="col">Branch</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r, code in rows %}
+                        <tr>
+                            <td class="fw-semibold">{{ r.requisition_number }}</td>
+                            <td>{{ r.in_favor_of }}</td>
+                            <td class="font-monospace">{{ r.account_number }}</td>
+                            <td class="font-monospace">{{ code }}</td>
+                            <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
+                            <td>{{ r.currency }}</td>
+                            <td>{{ r.branch }}</td>
+                            <td><span class="badge rounded-pill text-bg-success">Batched</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5 text-body-secondary">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                No batches have been downloaded yet.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    (function () {
+        var selectAll = document.getElementById('selectAll');
+        var checks = document.querySelectorAll('.batch-check');
+        var form = document.getElementById('batchForm');
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                checks.forEach(function (c) { c.checked = selectAll.checked; });
+            });
+        }
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                var picked = Array.prototype.filter.call(checks, function (c) { return c.checked; });
+                if (!picked.length) {
+                    event.preventDefault();
+                    alert('Select at least one payment to batch.');
+                    return;
+                }
+                var currencies = {};
+                picked.forEach(function (c) { currencies[c.dataset.currency] = true; });
+                if (Object.keys(currencies).length > 1) {
+                    event.preventDefault();
+                    alert('A batch can only contain one currency. Select payments in one currency.');
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}
+

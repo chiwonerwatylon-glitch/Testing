@@ -191,3 +191,34 @@ class AuditLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     user = db.relationship('User', backref='audit_logs')
+
+
+class RequisitionBatch(db.Model):
+    """A Stanbic upload batch. Created when a batch file is downloaded."""
+    __tablename__ = 'requisition_batches'
+
+    id = db.Column(db.Integer, primary_key=True)
+    batch_number = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    currency = db.Column(db.String(10), nullable=False)
+    row_count = db.Column(db.Integer, default=0)
+    total_amount = db.Column(db.Float, default=0.0)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    created_by = db.relationship('User', backref='batches')
+
+    def __repr__(self):
+        return f'<RequisitionBatch {self.batch_number}>'
+
+
+class BatchItem(db.Model):
+    """Links an approved requisition to the batch it was downloaded in. One batch per requisition."""
+    __tablename__ = 'batch_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('requisition_batches.id'), nullable=False, index=True)
+    requisition_id = db.Column(db.Integer, db.ForeignKey('requisitions.id'), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    batch = db.relationship('RequisitionBatch', backref=db.backref('items', order_by='BatchItem.id'))
+    requisition = db.relationship('Requisition', backref=db.backref('batch_item', uselist=False))

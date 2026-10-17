@@ -647,3 +647,117 @@ def search():
             Requisition.currency.ilike(like),
         )).order_by(Requisition.created_at.desc()).limit(100).all()
     return render_template('requisition/search.html', q=q, results=results)
+
+
+def _can_batch():
+    return current_user.role == 'superuser' or current_user.can_review or current_user.can_approve
+
+
+def _pending_batch_query():
+    """Approved requisitions that have not yet been downloaded in a batch."""
+    from app.models import BatchItem
+    batched = db.session.query(BatchItem.requisition_id)
+    return Requisition.query.filter(Requisition.status == 'approved', ~Requisition.id.in_(batched))
+
+
+def _next_batch_number():
+    from app.models import RequisitionBatch
+    prefix = f"BATCH-{datetime.utcnow():%Y%m%d}"
+    count = RequisitionBatch.query.filter(RequisitionBatch.batch_number.like(prefix + '%')).count()
+    return f"{prefix}-{count + 1:03d}"
+
+
+def _batch_response(batch, requisitions, fmt):
+    from app.utils.batch import to_batch_csv, to_batch_excel
+    if fmt == 'csv':
+        buf = to_batch_csv(requisitions)
+        mimetype, ext = 'text/csv', 'csv'
+    else:
+        stamp = datetime.utcnow().strftime('%d %b %Y %H:%M UTC')
+        buf = to_batch_excel(requisitions, batch.batch_number, batch.currency, stamp)
+        mimetype, ext = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx'
+    return send_file(buf, mimetype=mimetype, as_attachment=True,
+                     download_name=f"{batch.batch_number}.{ext}")
+
+
+@requisition_bp.route('/batches')
+@login_required
+@active_user_required
+def batches():
+    from app.models import RequisitionBatch, BatchItem
+    from app.utils.batch import payment_code
+    if not _can_batch():
+        flash('You do not have access to batching.', 'warning')
+        return redirect(url_for('requisition.dashboard'))
+
+    pending = [(r, payment_code(r)) for r in
+               _pending_batch_query().order_by(Requisition.currency, Requisition.created_at).all()]
+    history = []
+    for batch in RequisitionBatch.query.order_by(RequisitionBatch.created_at.desc()).all():
+        rows = [(bi.requisition, payment_code(bi.requisition)) for bi in batch.items]
+        history.append((batch, rows))
+    return render_template('requisition/batches.html', pending=pending, history=history,
+                           batched_count=BatchItem.query.count())
+
+
+@requisition_bp.route('/batches/create', methods=['POST'])
+@login_required
+@active_user_required
+def batch_create():
+    from sqlalchemy.exc import IntegrityError
+    from app.models import RequisitionBatch, BatchItem
+    if not _can_batch():
+        flash('You do not have access to batching.', 'warning')
+        return redirect(url_for('requisition.dashboard'))
+
+    fmt = request.form.get('format')
+    ids = request.form.getlist('ids', type=int)
+    if fmt not in ('csv', 'xlsx') or not ids:
+        flash('Select at least one approved payment and a file format.', 'warning')
+        return redirect(url_for('requisition.batches'))
+
+    requisitions = _pending_batch_query().filter(Requisition.id.in_(ids)) \
+        .order_by(Requisition.created_at).all()
+    if not requisitions:
+        flash('The selected payments are already batched or not approved.', 'warning')
+        return redirect(url_for('requisition.batches'))
+    if len({r.currency for r in requisitions}) > 1:
+        flash('A batch can only contain one currency.', 'warning')
+        return redirect(url_for('requisition.batches'))
+
+    from decimal import Decimal
+    from app.utils.batch import money
+    total = sum((money(r.total_debit) for r in requisitions), Decimal('0.00'))
+    batch = RequisitionBatch(batch_number=_next_batch_number(), currency=requisitions[0].currency,
+                             row_count=len(requisitions), total_amount=float(total),
+                             created_by_id=current_user.id)
+    db.session.add(batch)
+    db.session.flush()
+    for r in requisitions:
+        db.session.add(BatchItem(batch_id=batch.id, requisition_id=r.id))
+    db.session.add(AuditLog(
+        user_id=current_user.id, action='create_batch', entity_type='batch', entity_id=batch.id,
+        details=f'Batch {batch.batch_number}: {len(requisitions)} payment(s), {batch.currency} {total}',
+        ip_address=request.remote_addr))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash('One or more payments were batched by someone else. Please try again.', 'warning')
+        return redirect(url_for('requisition.batches'))
+
+    flash(f'{batch.batch_number} created with {len(requisitions)} payment(s).', 'success')
+    return _batch_response(batch, requisitions, fmt)
+
+
+@requisition_bp.route('/batches/<int:id>/download/<fmt>')
+@login_required
+@active_user_required
+def batch_download(id, fmt):
+    from app.models import RequisitionBatch, BatchItem
+    if not _can_batch() or fmt not in ('csv', 'xlsx'):
+        flash('Batch download is not available.', 'warning')
+        return redirect(url_for('requisition.batches'))
+    batch = RequisitionBatch.query.get_or_404(id)
+    requisitions = [bi.requisition for bi in BatchItem.query.filter_by(batch_id=id).order_by(BatchItem.id)]
+    return _batch_response(batch, requisitions, fmt)
