@@ -1,89 +1,174 @@
-<aside class="offcanvas-lg offcanvas-start col-lg-2 bg-body border-end sidebar-col" tabindex="-1" id="sidebarMenu"
-       aria-labelledby="sidebarMenuLabel">
+<aside
+    class="offcanvas-lg offcanvas-start col-lg-2 bg-body border-end sidebar-col"
+    tabindex="-1"
+    id="sidebarMenu"
+    aria-labelledby="sidebarMenuLabel"
+>
+    {# Mobile header #}
     <div class="offcanvas-header d-lg-none border-bottom">
         <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="offcanvas"
+            data-bs-target="#sidebarMenu"
+            aria-label="Close"
+        ></button>
     </div>
 
     <div class="offcanvas-body d-flex flex-column p-3">
-        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">Workspace</div>
+        {# Workspace section #}
+        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">
+            Workspace
+        </div>
         <ul class="nav nav-pills flex-column gap-1 mb-3">
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.dashboard' }}" href="{{ url_for('requisition.dashboard') }}">
-                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.dashboard' }}"
+                    href="{{ url_for('requisition.dashboard') }}"
+                >
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    Dashboard
                 </a>
             </li>
+
             {% if current_user.can_initiate %}
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.create' }}" href="{{ url_for('requisition.create') }}">
-                    <i class="bi bi-plus-circle me-2"></i>New requisition
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.create' }}"
+                    href="{{ url_for('requisition.create') }}"
+                >
+                    <i class="bi bi-plus-circle me-2"></i>
+                    New requisition
                 </a>
             </li>
             {% endif %}
+
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.my_requisitions' }}" href="{{ url_for('requisition.my_requisitions') }}">
-                    <i class="bi bi-file-earmark-text me-2"></i>My requisitions
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.my_requisitions' }}"
+                    href="{{ url_for('requisition.my_requisitions') }}"
+                >
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    My requisitions
                 </a>
             </li>
+
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.list' }}" href="{{ url_for('requisition.list') }}">
-                    <i class="bi bi-list-ul me-2"></i>All requisitions
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.list' }}"
+                    href="{{ url_for('requisition.list') }}"
+                >
+                    <i class="bi bi-list-ul me-2"></i>
+                    All requisitions
                 </a>
             </li>
+
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.reports' }}" href="{{ url_for('requisition.reports') }}">
-                    <i class="bi bi-bar-chart-line me-2"></i>Reports
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.reports' }}"
+                    href="{{ url_for('requisition.reports') }}"
+                >
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    Reports
                 </a>
             </li>
         </ul>
 
+        {# Approvals section #}
         {% if current_user.can_review or current_user.can_approve %}
-        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">Approvals</div>
+        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">
+            Approvals
+        </div>
         <ul class="nav nav-pills flex-column gap-1 mb-3">
             {% if current_user.can_review %}
             <li class="nav-item">
-                <a class="nav-link sidebar-link d-flex justify-content-between align-items-center {{ 'active' if request.endpoint == 'requisition.review_queue' }}" href="{{ url_for('requisition.review_queue') }}">
-                    <span><i class="bi bi-eye me-2"></i>Review queue</span>
-                    <span class="badge rounded-pill text-bg-info" id="pending-review-count" style="display:none;"></span>
+                <a
+                    class="nav-link sidebar-link d-flex justify-content-between align-items-center {{ 'active' if request.endpoint == 'requisition.review_queue' }}"
+                    href="{{ url_for('requisition.review_queue') }}"
+                >
+                    <span>
+                        <i class="bi bi-eye me-2"></i>
+                        Review queue
+                    </span>
+                    <span
+                        class="badge rounded-pill text-bg-info"
+                        id="pending-review-count"
+                        style="display:none;"
+                    ></span>
                 </a>
             </li>
             {% endif %}
+
             {% if current_user.can_approve %}
             <li class="nav-item">
-                <a class="nav-link sidebar-link d-flex justify-content-between align-items-center {{ 'active' if request.endpoint == 'requisition.pending_approval' }}" href="{{ url_for('requisition.pending_approval') }}">
-                    <span><i class="bi bi-check2-circle me-2"></i>Pending approval</span>
-                    <span class="badge rounded-pill text-bg-warning" id="pending-approval-count" style="display:none;"></span>
+                <a
+                    class="nav-link sidebar-link d-flex justify-content-between align-items-center {{ 'active' if request.endpoint == 'requisition.pending_approval' }}"
+                    href="{{ url_for('requisition.pending_approval') }}"
+                >
+                    <span>
+                        <i class="bi bi-check2-circle me-2"></i>
+                        Pending approval
+                    </span>
+                    <span
+                        class="badge rounded-pill text-bg-warning"
+                        id="pending-approval-count"
+                        style="display:none;"
+                    ></span>
                 </a>
             </li>
             {% endif %}
         </ul>
         {% endif %}
 
+        {# Administration section #}
         {% if current_user.role == 'superuser' %}
-        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">Administration</div>
+        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">
+            Administration
+        </div>
         <ul class="nav nav-pills flex-column gap-1 mb-3">
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">
-                    <i class="bi bi-shield-lock me-2"></i>Admin dashboard
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.dashboard' }}"
+                    href="{{ url_for('admin.dashboard') }}"
+                >
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Admin dashboard
                 </a>
             </li>
+
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.users' }}" href="{{ url_for('admin.users') }}">
-                    <i class="bi bi-people me-2"></i>User management
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.users' }}"
+                    href="{{ url_for('admin.users') }}"
+                >
+                    <i class="bi bi-people me-2"></i>
+                    User management
                 </a>
             </li>
+
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.audit_logs' }}" href="{{ url_for('admin.audit_logs') }}">
-                    <i class="bi bi-journal-text me-2"></i>Audit logs
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.audit_logs' }}"
+                    href="{{ url_for('admin.audit_logs') }}"
+                >
+                    <i class="bi bi-journal-text me-2"></i>
+                    Audit logs
                 </a>
             </li>
         </ul>
         {% endif %}
 
+        {# User meta (bottom) #}
         <div class="mt-auto pt-3 border-top small text-body-secondary px-2">
-            <div><i class="bi bi-person-badge me-1"></i>{{ current_user.role|title }}</div>
-            <div><i class="bi bi-building me-1"></i>{{ current_user.department }}</div>
+            <div>
+                <i class="bi bi-person-badge me-1"></i>
+                {{ current_user.role|title }}
+            </div>
+            <div>
+                <i class="bi bi-building me-1"></i>
+                {{ current_user.department }}
+            </div>
         </div>
     </div>
 </aside>
-
