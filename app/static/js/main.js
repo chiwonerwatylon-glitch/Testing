@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (bsAlert) {
                 bsAlert.close();
             }
-        }, 5000);
+        }, 2000);
     });
 
     /* -----------------------------------------

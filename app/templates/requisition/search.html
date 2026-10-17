@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Search · First Mutual Life{% endblock %}
+
+{% block content %}
+{% set status_badges = {
+    'draft': 'text-bg-secondary',
+    'pending_review': 'text-bg-info',
+    'pending_approval': 'text-bg-warning',
+    'partially_approved': 'text-bg-primary',
+    'approved': 'text-bg-success',
+    'rejected': 'text-bg-danger'
+} %}
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-1">Search requisitions</h2>
+    <p class="text-body-secondary mb-0">Find by requisition number, payee, bank, account number, reason, status or currency.</p>
+</div>
+
+<form method="get" action="{{ url_for('requisition.search') }}" role="search" class="mb-4">
+    <div class="input-group input-group-lg shadow-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="search" class="form-control" name="q" value="{{ q }}" placeholder="Search requisitions" aria-label="Search requisitions" autofocus>
+        <button class="btn btn-brand" type="submit">Search</button>
+    </div>
+</form>
+
+{% if q %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">Results for &ldquo;{{ q }}&rdquo;</h5>
+        <span class="badge text-bg-secondary rounded-pill">{{ results|length }}</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Requisition</th>
+                    <th scope="col">Payee</th>
+                    <th scope="col" class="text-end">Amount</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Initiator</th>
+                    <th scope="col">Date</th>
+                    <th scope="col" class="text-end">Open</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in results %}
+                <tr>
+                    <td class="fw-semibold">{{ req.requisition_number }}</td>
+                    <td>{{ req.in_favor_of }}</td>
+                    <td class="text-end font-monospace">{{ req.currency }} {{ '{:,.2f}'.format(req.total_debit or 0) }}</td>
+                    <td><span class="badge rounded-pill {{ status_badges.get(req.status, 'text-bg-secondary') }}">{{ req.status.replace('_', ' ')|title }}</span></td>
+                    <td>{{ req.initiator.full_name }}</td>
+                    <td class="text-body-secondary">{{ req.created_at.strftime('%d %b %Y') }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('requisition.detail', id=req.id) }}" class="btn btn-sm btn-outline-secondary" aria-label="Open {{ req.requisition_number }}">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-body-secondary">
+                        <i class="bi bi-search fs-2 d-block mb-2"></i>
+                        No requisitions match &ldquo;{{ q }}&rdquo;.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

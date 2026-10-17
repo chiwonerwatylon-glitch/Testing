@@ -623,3 +623,27 @@ def my_requisitions():
     return render_template('requisition/list.html', 
                           requisitions=requisitions, 
                           title='My Requisitions')
+
+
+@requisition_bp.route('/search')
+@login_required
+@active_user_required
+def search():
+    from sqlalchemy import or_
+    q = (request.args.get('q') or '').strip()
+    results = []
+    if q:
+        query = Requisition.query
+        if current_user.role != 'superuser' and not (current_user.can_review or current_user.can_approve):
+            query = query.filter(Requisition.initiator_id == current_user.id)
+        like = f'%{q}%'
+        results = query.filter(or_(
+            Requisition.requisition_number.ilike(like),
+            Requisition.in_favor_of.ilike(like),
+            Requisition.bank_name.ilike(like),
+            Requisition.account_number.ilike(like),
+            Requisition.reason_for_payment.ilike(like),
+            Requisition.status.ilike(like),
+            Requisition.currency.ilike(like),
+        )).order_by(Requisition.created_at.desc()).limit(100).all()
+    return render_template('requisition/search.html', q=q, results=results)

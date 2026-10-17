@@ -38,7 +38,7 @@
         }
         .btn-signin:hover, .btn-signin:focus { filter: brightness(1.06); color: #fff; }
         .form-control:focus { border-color: #D21F3C; box-shadow: 0 0 0 .2rem rgba(210, 31, 60, .2); }
-        .auth-card { max-width: 440px; width: 100%; }
+        .auth-card { max-width: 560px; width: 100%; }
         .eyebrow { letter-spacing: .08em; }
         .theme-toggle { position: fixed; top: 1rem; right: 1rem; z-index: 10; width: 38px; height: 38px; }
     </style>
@@ -107,7 +107,7 @@
 
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show small" role="alert">
+                                <div class="alert alert-{{ category }} alert-dismissible fade show small" role="alert" data-autodismiss>
                                     {{ message }}
                                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
@@ -117,33 +117,31 @@
                         <form method="POST" class="needs-validation" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                            <div class="form-floating mb-3">
-                                <input type="email" class="form-control" id="email" name="email"
-                                       placeholder="name@firstmutual.co.zw" required autocomplete="email">
-                                <label for="email">Corporate email</label>
+                            <div class="mb-3">
+                                <input type="email" class="form-control form-control-lg" id="email" name="email"
+                                       aria-label="Corporate email" required autocomplete="email">
                                 <div class="invalid-feedback">Enter a valid corporate email address.</div>
                             </div>
 
-                            <div class="input-group mb-1">
-                                <div class="form-floating flex-grow-1">
+                            <div class="mb-3">
+                                <div class="input-group input-group-lg">
                                     <input type="password" class="form-control" id="password" name="password"
-                                           placeholder="Password" required autocomplete="current-password">
-                                    <label for="password">Password</label>
+                                           aria-label="Password" required autocomplete="current-password">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword"
+                                            aria-label="Show password"><i class="bi bi-eye"></i></button>
+                                    <div class="invalid-feedback">Enter your password.</div>
                                 </div>
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword"
-                                        aria-label="Show password"><i class="bi bi-eye"></i></button>
-                                <div class="invalid-feedback">Enter your password.</div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                                    <label class="form-check-label small" for="remember">Keep me signed in</label>
+                                    <label class="form-check-label" for="remember">Keep me signed in</label>
                                 </div>
                                 <span class="small text-body-secondary"><i class="bi bi-lock-fill me-1"></i>Encrypted connection</span>
                             </div>
 
-                            <button type="submit" class="btn btn-signin btn-lg w-100 text-white fw-semibold">
+                            <button type="submit" class="btn btn-signin btn-lg w-100 py-3 text-white fw-semibold">
                                 <i class="bi bi-box-arrow-in-right me-2"></i>Sign in
                             </button>
                         </form>
@@ -165,6 +163,13 @@
     <script>
         (function () {
             'use strict';
+
+            // Status messages (e.g. "You have been logged out.") disappear after 2 seconds
+            document.querySelectorAll('[data-autodismiss]').forEach(function (alert) {
+                setTimeout(function () {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }, 2000);
+            });
 
             // Show / hide password
             var toggle = document.getElementById('togglePassword');
