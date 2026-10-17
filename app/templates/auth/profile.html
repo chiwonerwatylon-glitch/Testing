@@ -8,95 +8,142 @@
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-fml-primary text-white">
-                    <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>My Profile</h4>
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-circle me-2"></i>
+                        My Profile
+                    </h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST">
+                    <form method="post" novalidate>
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <!-- Profile Info (Read-only) -->
+
+                        {# Profile Info (Read-only) #}
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Full Name</label>
-                                <p class="form-control-plaintext fw-bold">{{ current_user.full_name }}</p>
+                                <p class="form-control-plaintext fw-bold">
+                                    {{ current_user.full_name }}
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Email</label>
-                                <p class="form-control-plaintext">{{ current_user.email }}</p>
+                                <p class="form-control-plaintext">
+                                    {{ current_user.email }}
+                                </p>
                             </div>
                         </div>
-                        
+
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Employee ID</label>
-                                <p class="form-control-plaintext">{{ current_user.employee_id }}</p>
+                                <p class="form-control-plaintext">
+                                    {{ current_user.employee_id }}
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Department</label>
-                                <p class="form-control-plaintext">{{ current_user.department }}</p>
+                                <p class="form-control-plaintext">
+                                    {{ current_user.department }}
+                                </p>
                             </div>
                         </div>
-                        
-                        <!-- Position, phone and signature are managed by the administrator -->
+
+                        {# Position, phone and signature are managed by the administrator #}
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Position</label>
-                                <p class="form-control-plaintext">{{ current_user.position or '-' }}</p>
+                                <p class="form-control-plaintext">
+                                    {{ current_user.position or '-' }}
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted">Phone Number</label>
-                                <p class="form-control-plaintext">{{ current_user.phone or '-' }}</p>
+                                <p class="form-control-plaintext">
+                                    {{ current_user.phone or '-' }}
+                                </p>
                             </div>
                         </div>
-                        
-                        <!-- Signature (read-only) -->
+
+                        {# Signature (read-only) #}
                         <div class="mb-4">
                             <label class="form-label text-muted">Signature</label>
                             {% if current_user.signature_path %}
-                            <div class="mb-2">
-                                <img src="{{ url_for('static', filename='signatures/' + current_user.signature_path) }}" 
-                                     alt="Current Signature" class="signature-display">
-                                <span class="badge bg-success ms-2">Signature Uploaded</span>
+                            <div class="mb-2 d-flex align-items-center flex-wrap gap-2">
+                                <img
+                                    src="{{ url_for('static', filename='signatures/' ~ current_user.signature_path) }}"
+                                    alt="Current Signature"
+                                    class="signature-display"
+                                >
+                                <span class="badge bg-success">
+                                    Signature Uploaded
+                                </span>
                             </div>
                             {% else %}
-                            <div class="alert alert-warning">
+                            <div class="alert alert-warning mb-2">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                No signature on file. Please contact the administrator to have your signature added before you initiate, review, or approve requisitions.
+                                No signature on file. Please contact the administrator to have your signature added
+                                before you initiate, review, or approve requisitions.
                             </div>
                             {% endif %}
                             <div class="form-text">
                                 Your signature and profile details can only be changed by an administrator.
                                 {% if current_user.role == 'superuser' %}
-                                <a href="{{ url_for('admin.user_edit', id=current_user.id) }}">Edit via user administration</a>.
+                                <a href="{{ url_for('admin.user_edit', id=current_user.id) }}">
+                                    Edit via user administration
+                                </a>.
                                 {% endif %}
                             </div>
                         </div>
-                        
+
                         <hr>
-                        
-                        <!-- Password Change -->
+
+                        {# Password Change #}
                         <h5 class="mb-3">Change Password</h5>
-                        
+
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label for="current_password" class="form-label">Current Password</label>
-                                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                <label for="current_password" class="form-label">
+                                    Current Password
+                                </label>
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="current_password"
+                                    name="current_password"
+                                    required
+                                >
                             </div>
                             <div class="col-md-4">
-                                <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                <label for="new_password" class="form-label">
+                                    New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="new_password"
+                                    name="new_password"
+                                    required
+                                >
                             </div>
                             <div class="col-md-4">
-                                <label for="confirm_new_password" class="form-label">Confirm New Password</label>
-                                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" required>
+                                <label for="confirm_new_password" class="form-label">
+                                    Confirm New Password
+                                </label>
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="confirm_new_password"
+                                    name="confirm_new_password"
+                                    required
+                                >
                             </div>
                         </div>
-                        
+
                         <hr>
-                        
-                        <!-- Permissions Display -->
+
+                        {# Permissions Display #}
                         <h5 class="mb-3">My Permissions</h5>
-                        <div class="row mb-4">
+                        <div class="row mb-4 g-2">
                             <div class="col-auto">
                                 <span class="badge {{ 'bg-success' if current_user.can_initiate else 'bg-secondary' }} p-2">
                                     <i class="bi bi-{{ 'check' if current_user.can_initiate else 'x' }}-circle me-1"></i>
@@ -122,9 +169,10 @@
                                 </span>
                             </div>
                         </div>
-                        
+
                         <button type="submit" class="btn btn-fml-primary">
-                            <i class="bi bi-key me-2"></i>Change Password
+                            <i class="bi bi-key me-2"></i>
+                            Change Password
                         </button>
                     </form>
                 </div>
