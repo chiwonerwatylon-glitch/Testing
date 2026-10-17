@@ -67,6 +67,7 @@ def seed_superuser(app):
     if not email or not password:
         return
 
+    from sqlalchemy.exc import IntegrityError
     from app.models import User
     from werkzeug.security import generate_password_hash
 
@@ -118,6 +119,12 @@ def seed_superuser(app):
             can_approve=True,
             is_senior_approver=True,
         )
-        db.session.add(superuser)
-        db.session.commit()
+        try:
+            db.session.add(superuser)
+            db.session.commit()
+        except IntegrityError:
+            # Another worker seeded the same user concurrently.
+            db.session.rollback()
+            app.logger.info('Superuser already seeded by another worker.')
+            return
         app.logger.info('Created superuser: %s', email)

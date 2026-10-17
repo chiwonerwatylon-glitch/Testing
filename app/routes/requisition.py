@@ -41,12 +41,19 @@ def dashboard():
 @active_user_required
 @initiator_required
 def create():
+
+    # Reviewers and approvers cannot initiate requisitions
+    if current_user.can_review or current_user.can_approve or current_user.is_senior_approver:
+        flash('Reviewers and approvers cannot initiate requisitions.', 'warning')
+        return redirect(url_for('requisition.dashboard'))
+
     if request.method == 'POST':
         # Check if user has signature
         if not current_user.signature_path:
-            flash('You must upload your signature before creating a requisition. Please update your profile.', 'warning')
+            message = 'Upload your signature on your profile page before submitting a requisition.'
+            flash(message, 'warning')
             return redirect(url_for('auth.profile'))
-        
+
         # Create requisition
         requisition = Requisition(
             requisition_number=Requisition.generate_requisition_number(),

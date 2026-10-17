@@ -74,6 +74,11 @@ def user_edit(id):
         user.can_review = request.form.get('can_review') == 'on'
         user.can_approve = request.form.get('can_approve') == 'on'
         user.is_senior_approver = request.form.get('is_senior_approver') == 'on'
+
+        # Reviewers and approvers must never be initiators
+        if user.can_review or user.can_approve or user.is_senior_approver:
+            user.can_initiate = False
+
         
         # Reset password if requested
         new_password = request.form.get('new_password')
@@ -193,6 +198,11 @@ def user_create():
             is_senior_approver=request.form.get('is_senior_approver') == 'on',
             password_hash=generate_password_hash(request.form.get('password'))
         )
+
+        # Reviewers and approvers must never be initiators
+        if user.can_review or user.can_approve or user.is_senior_approver:
+            user.can_initiate = False
+
         
         # Handle signature upload
         if 'signature' in request.files:
