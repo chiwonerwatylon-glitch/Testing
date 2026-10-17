@@ -218,6 +218,7 @@ class BatchItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('requisition_batches.id'), nullable=False, index=True)
     requisition_id = db.Column(db.Integer, db.ForeignKey('requisitions.id'), nullable=False, unique=True)
+    reference = db.Column(db.String(255))  # editable at batching; defaults to reason for payment
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     batch = db.relationship('RequisitionBatch', backref=db.backref('items', order_by='BatchItem.id'))

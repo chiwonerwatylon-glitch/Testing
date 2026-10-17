@@ -47,7 +47,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th scope="col"><span class="visually-hidden">Select</span></th>
-                                <th scope="col">Reference</th>
+                                <th scope="col">Reference <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col">Account name</th>
                                 <th scope="col">Account number</th>
                                 <th scope="col">Code</th>
@@ -58,13 +58,17 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for r, code in pending %}
+                            {% for r, code, ref in pending %}
                             <tr>
                                 <td>
                                     <input class="form-check-input batch-check" type="checkbox" name="ids" value="{{ r.id }}"
                                            data-currency="{{ r.currency }}" aria-label="Select {{ r.requisition_number }}">
                                 </td>
-                                <td class="fw-semibold">{{ r.requisition_number }}</td>
+                                <td style="min-width: 220px;">
+                                    <input type="text" class="form-control form-control-sm" name="ref_{{ r.id }}"
+                                           value="{{ ref }}" maxlength="255" aria-label="Reference for {{ r.requisition_number }}">
+                                    <div class="small text-body-secondary mt-1">{{ r.requisition_number }}</div>
+                                </td>
                                 <td>{{ r.in_favor_of }}</td>
                                 <td class="font-monospace">{{ r.account_number }}</td>
                                 <td class="font-monospace">{{ code }}</td>
@@ -128,9 +132,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r, code in rows %}
+                        {% for r, code, ref in rows %}
                         <tr>
-                            <td class="fw-semibold">{{ r.requisition_number }}</td>
+                            <td class="fw-semibold">{{ ref }}</td>
                             <td>{{ r.in_favor_of }}</td>
                             <td class="font-monospace">{{ r.account_number }}</td>
                             <td class="font-monospace">{{ code }}</td>
