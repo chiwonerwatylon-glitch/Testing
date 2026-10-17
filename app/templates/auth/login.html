@@ -1,36 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}Login – First Mutual Life Requisition System{% endblock %}
+{% block title %}Sign in – First Mutual Life Requisition System{% endblock %}
 
 {% block content %}
 <div class="auth-container">
-    <div class="auth-card auth-card-wide">
 
-        <!-- Brand / Header -->
-        <div class="auth-header">
+    <!-- Optional left brand / hero for large screens -->
+    <div class="d-none d-lg-flex flex-column justify-content-center align-items-start me-4 pe-4 auth-hero">
+        <div class="mb-4">
             <img
                 src="{{ url_for('static', filename='images/logo.png') }}"
                 alt="First Mutual Life Logo"
-                class="auth-logo mb-2"
+                class="auth-logo mb-3"
                 onerror="this.style.display='none'"
             >
-            <h1 class="auth-title mb-1">
-                First Mutual <span>Life</span>
+            <h1 class="display-6 fw-bold text-white mb-2">
+                First Mutual <span class="text-fml-primary">Life</span>
             </h1>
-            <p class="auth-subtitle mb-0">
-                Zimbabwe • Requisition Management System
+            <p class="lead text-white-50 mb-0">
+                Zimbabwe Requisition Management Platform, built for control, transparency and speed.
             </p>
         </div>
+        <ul class="list-unstyled text-white-50 small">
+            <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-fml-primary me-2"></i>
+                Secure, role-based approvals
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-check-circle-fill text-fml-primary me-2"></i>
+                Real-time tracking and audit trail
+            </li>
+            <li>
+                <i class="bi bi-check-circle-fill text-fml-primary me-2"></i>
+                Seamless integration across teams
+            </li>
+        </ul>
+    </div>
+
+    <!-- Right: Auth card -->
+    <div class="auth-card auth-card-wide">
+
+        <!-- Brand / Header (mobile-first) -->
+        <div class="auth-header text-center text-lg-start">
+            <div class="d-lg-none mb-2">
+                <img
+                    src="{{ url_for('static', filename='images/logo.png') }}"
+                    alt="First Mutual Life Logo"
+                    class="auth-logo mb-2"
+                    onerror="this.style.display='none'"
+                >
+            </div>
+            <p class="text-uppercase fw-semibold small text-fml-primary mb-1">
+                Secure admin sign-in
+            </p>
+            <h2 class="auth-title mb-1">
+                Welcome back
+            </h2>
+            <p class="auth-subtitle mb-0">
+                Sign in with your corporate credentials to access the FML Requisition System.
+            </p>
+        </div>
+
+        <!-- Optional: flash messages just for this page -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-2" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
         <!-- Login Form -->
         <form method="POST" class="auth-form needs-validation" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+            <!-- Email -->
             <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
+                <label for="email" class="form-label">Corporate email</label>
                 <div class="input-group">
                     <span class="input-group-text">
-                        <i class="bi bi-envelope"></i>
+                        <i class="bi bi-envelope-open"></i>
                     </span>
                     <input
                         type="email"
@@ -39,23 +93,24 @@
                         name="email"
                         required
                         autocomplete="email"
-                        placeholder="your.email@firstmutual.co.zw"
+                        placeholder="your.name@firstmutual.co.zw"
                     >
                     <div class="invalid-feedback">
-                        Please enter a valid corporate email address.
+                        Please enter a valid First Mutual email address.
                     </div>
                 </div>
             </div>
 
+            <!-- Password -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <label for="password" class="form-label mb-0">Password</label>
-                    {# Optional: add a forgot password route when available #}
+                    {# Hook for future forgot-password flow #}
                     {# <a href="{{ url_for('auth.forgot_password') }}" class="small text-decoration-none">Forgot password?</a> #}
                 </div>
                 <div class="input-group" id="passwordGroup">
                     <span class="input-group-text">
-                        <i class="bi bi-lock"></i>
+                        <i class="bi bi-shield-lock"></i>
                     </span>
                     <input
                         type="password"
@@ -68,7 +123,7 @@
                         placeholder="Enter your password"
                     >
                     <button
-                        class="btn btn-outline-secondary"
+                        class="btn btn-outline-secondary border-start-0"
                         type="button"
                         id="togglePassword"
                         aria-label="Toggle password visibility"
@@ -79,30 +134,45 @@
                         Please provide your password.
                     </div>
                 </div>
+                <div class="form-text">
+                    Ensure no one is watching your screen when signing in.
+                </div>
             </div>
 
-            <div class="mb-3 form-check">
-                <input
-                    type="checkbox"
-                    class="form-check-input"
-                    id="remember"
-                    name="remember"
-                >
-                <label class="form-check-label" for="remember">
-                    Remember me on this device
-                </label>
+            <!-- Remember me -->
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div class="form-check">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="remember"
+                        name="remember"
+                    >
+                    <label class="form-check-label" for="remember">
+                        Remember me on this device
+                    </label>
+                </div>
+                <span class="small text-muted d-none d-md-inline">
+                    Your credentials are encrypted and never shared.
+                </span>
             </div>
 
-            <button type="submit" class="btn btn-fml-primary w-100 py-2">
+            <!-- Submit -->
+            <button type="submit" class="btn btn-fml-primary w-100 py-2 mb-2">
                 <i class="bi bi-box-arrow-in-right me-2"></i>
                 Sign in
             </button>
+
+            <div class="text-center small text-muted mt-1">
+                By continuing, you confirm you are authorised to use this system.
+            </div>
         </form>
 
+        <!-- Footer -->
         <div class="auth-footer">
             <p class="mb-0 small">
-                Don’t have an account?
-                <a href="{{ url_for('auth.register') }}">Request access</a>
+                Need access?
+                <a href="{{ url_for('auth.register') }}">Request an account</a>
             </p>
         </div>
     </div>
@@ -114,7 +184,7 @@
     (function () {
         'use strict';
 
-        // Password visibility toggle (defensive: check element exists)
+        // Password visibility toggle
         const toggleBtn = document.getElementById('togglePassword');
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function () {
@@ -132,7 +202,7 @@
             });
         }
 
-        // Optional: Bootstrap-style client-side validation (non-breaking)
+        // Bootstrap-style client-side validation (non-breaking)
         const form = document.querySelector('.auth-form.needs-validation');
         if (form) {
             form.addEventListener('submit', function (event) {
@@ -146,7 +216,3 @@
     })();
 </script>
 {% endblock %}
-
-
-
-
