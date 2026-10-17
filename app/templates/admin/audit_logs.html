@@ -1,15 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Audit Logs - FML Requisition System{% endblock %}
+{% block title %}Audit Logs – FML Requisition System{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h2 class="mb-4"><i class="bi bi-journal-text me-2"></i>Audit Logs</h2>
-    
-    <div class="card mb-4">
+
+    <!-- Page header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h2 class="mb-1 d-flex align-items-center">
+                <span class="stat-icon bg-primary bg-opacity-10 me-2">
+                    <i class="bi bi-journal-text text-primary"></i>
+                </span>
+                <span class="fw-semibold">Audit Logs</span>
+            </h2>
+            <p class="text-muted mb-0 small">
+                Comprehensive trail of user activity across the FML Requisition System.
+            </p>
+        </div>
+        {% if logs.total is defined %}
+        <div class="text-end">
+            <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis">
+                <i class="bi bi-list-check me-1"></i>
+                {{ logs.total }} record{{ '' if logs.total == 1 else 's' }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4 shadow-sm">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-5">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label mb-1">User</label>
                     <select name="user_id" class="form-select">
                         <option value="">All Users</option>
                         {% for u in users %}
@@ -17,55 +41,184 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-5">
-                    <input type="text" class="form-control" name="action" placeholder="Filter by action..." value="{{ action_filter }}">
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label mb-1">Action</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="action"
+                        placeholder="e.g. created_requisition, approved_requisition"
+                        value="{{ action_filter }}"
+                    >
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-fml-primary w-100">Filter</button>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label mb-1">From</label>
+                    <input
+                        type="date"
+                        class="form-control"
+                        name="start_date"
+                        value="{{ start_date or '' }}"
+                    >
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label mb-1">To</label>
+                    <input
+                        type="date"
+                        class="form-control"
+                        name="end_date"
+                        value="{{ end_date or '' }}"
+                    >
+                </div>
+
+                <div class="col-12 d-flex justify-content-between justify-content-md-end gap-2 mt-2">
+                    <a
+                        href="{{ url_for('admin.audit_logs') }}"
+                        class="btn btn-outline-secondary btn-sm px-3"
+                    >
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </a>
+                    <button type="submit" class="btn btn-fml-primary btn-sm px-4">
+                        <i class="bi bi-funnel me-1"></i> Apply Filters
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-    
+
+    <!-- Logs table -->
     <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center recent-header">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-activity me-2 text-fml-primary"></i>
+                Activity Stream
+            </h5>
+            {% if logs.total is defined %}
+            <span class="small text-muted">
+                Showing
+                <span class="fw-semibold">{{ logs.items|length }}</span>
+                of
+                <span class="fw-semibold">{{ logs.total }}</span>
+                entries
+            </span>
+            {% endif %}
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>User</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>IP Address</th>
-                            <th>Date/Time</th>
+                            <th scope="col" style="width: 18%;">User</th>
+                            <th scope="col" style="width: 16%;">Action</th>
+                            <th scope="col">Details</th>
+                            <th scope="col" style="width: 14%;">IP Address</th>
+                            <th scope="col" style="width: 18%;">Date / Time</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in logs.items %}
                         <tr>
-                            <td>{{ log.user.full_name if log.user else 'System' }}</td>
-                            <td><span class="badge bg-secondary">{{ log.action.replace('_', ' ').title() }}</span></td>
-                            <td>{{ log.details }}</td>
-                            <td><small class="text-muted">{{ log.ip_address }}</small></td>
-                            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold">
+                                        {{ log.user.full_name if log.user else 'System' }}
+                                    </span>
+                                    {% if log.user and log.user.email %}
+                                    <small class="text-muted">{{ log.user.email }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-secondary text-light text-uppercase small">
+                                    {{ log.action.replace('_', ' ') }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-wrap">
+                                    {{ log.details }}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="bi bi-globe me-1"></i>{{ log.ip_address or '—' }}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold">
+                                        {{ log.created_at.strftime('%Y-%m-%d') }}
+                                    </span>
+                                    <small class="text-muted">
+                                        {{ log.created_at.strftime('%H:%M:%S') }}
+                                    </small>
+                                </div>
+                            </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="5" class="text-center py-4 text-muted">No logs found</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox me-2"></i>
+                                No logs found for the selected filters.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-        
+
         {% if logs.pages > 1 %}
-        <div class="card-footer">
-            <nav>
-                <ul class="pagination justify-content-center mb-0">
+        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="small text-muted">
+                Page {{ logs.page }} of {{ logs.pages }}
+            </div>
+            <nav aria-label="Audit logs pagination">
+                <ul class="pagination pagination-sm mb-0">
                     {% if logs.has_prev %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('admin.audit_logs', page=logs.prev_num) }}">Previous</a></li>
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="{{ url_for('admin.audit_logs', page=logs.prev_num, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
+                            aria-label="Previous"
+                        >
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
                     {% endif %}
+
+                    {# Optional: show current +/- 1 pages #}
+                    {% for p in range(max(1, logs.page - 1), min(logs.pages + 1, logs.page + 2)) %}
+                        <li class="page-item {{ 'active' if p == logs.page }}">
+                            <a
+                                class="page-link"
+                                href="{{ url_for('admin.audit_logs', page=p, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
+                            >
+                                {{ p }}
+                            </a>
+                        </li>
+                    {% endfor %}
+
                     {% if logs.has_next %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('admin.audit_logs', page=logs.next_num) }}">Next</a></li>
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="{{ url_for('admin.audit_logs', page=logs.next_num, user_id=selected_user_id, action=action_filter, start_date=start_date, end_date=end_date) }}"
+                            aria-label="Next"
+                        >
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
                     {% endif %}
                 </ul>
             </nav>
@@ -74,3 +227,6 @@
     </div>
 </div>
 {% endblock %}
+
+
+
