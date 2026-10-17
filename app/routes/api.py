@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import login_required, current_user
 
 from app import db
@@ -14,7 +14,7 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 @login_required
 @active_user_required
 def requisition_stats():
-    """Summary statistics for the current user's requisitions (and global queues)."""
+    """Summary statistics for the current user's requisitions and global queues."""
     stats = {
         "draft": Requisition.query.filter_by(
             status="draft", initiator_id=current_user.id
@@ -78,7 +78,7 @@ def get_reviewers():
 @login_required
 @active_user_required
 def get_approvers():
-    """List all active approvers with senior flag."""
+    """List all active approvers with a senior flag."""
     approvers = User.query.filter_by(can_approve=True, is_active=True).all()
     return jsonify(
         [
@@ -97,7 +97,7 @@ def get_approvers():
 @login_required
 @active_user_required
 def notifications():
-    """Return recent notifications and unread count for current user."""
+    """Return recent notifications and unread count for the current user."""
     from app.models import Notification  # kept here to avoid circular import
 
     notifications_query = current_user.notifications
@@ -139,7 +139,8 @@ def notifications_read():
     from app.models import Notification  # kept local intentionally
 
     Notification.query.filter_by(
-        user_id=current_user.id, is_read=False
+        user_id=current_user.id,
+        is_read=False,
     ).update({"is_read": True})
     db.session.commit()
 
