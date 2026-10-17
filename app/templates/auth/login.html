@@ -1,50 +1,109 @@
 {% extends "base.html" %}
 
-{% block title %}Login - First Mutual Life Requisition System{% endblock %}
+{% block title %}Login – First Mutual Life Requisition System{% endblock %}
 
 {% block content %}
 <div class="auth-container">
-    <div class="auth-card">
+    <div class="auth-card auth-card-wide">
+
+        <!-- Brand / Header -->
         <div class="auth-header">
-    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FML Logo" class="auth-logo" onerror="this.style.display='none'">
-    <h1 class="auth-title">First Mutual <span>Life</span></h1>
-    <p class="auth-subtitle">Zimbabwe | Requisition Management System</p>
-</div>
-        
-        <form method="POST" class="auth-form">
+            <img
+                src="{{ url_for('static', filename='images/logo.png') }}"
+                alt="First Mutual Life Logo"
+                class="auth-logo mb-2"
+                onerror="this.style.display='none'"
+            >
+            <h1 class="auth-title mb-1">
+                First Mutual <span>Life</span>
+            </h1>
+            <p class="auth-subtitle mb-0">
+                Zimbabwe • Requisition Management System
+            </p>
+        </div>
+
+        <!-- Login Form -->
+        <form method="POST" class="auth-form needs-validation" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
+                <label for="email" class="form-label">Email address</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                    <input type="email" class="form-control" id="email" name="email" required placeholder="your.email@firstmutual.co.zw">
+                    <span class="input-group-text">
+                        <i class="bi bi-envelope"></i>
+                    </span>
+                    <input
+                        type="email"
+                        class="form-control"
+                        id="email"
+                        name="email"
+                        required
+                        autocomplete="email"
+                        placeholder="your.email@firstmutual.co.zw"
+                    >
+                    <div class="invalid-feedback">
+                        Please enter a valid corporate email address.
+                    </div>
                 </div>
             </div>
-            
+
             <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" required placeholder="Enter your password">
-                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                <div class="d-flex justify-content-between align-items-center">
+                    <label for="password" class="form-label mb-0">Password</label>
+                    {# Optional: add a forgot password route when available #}
+                    {# <a href="{{ url_for('auth.forgot_password') }}" class="small text-decoration-none">Forgot password?</a> #}
+                </div>
+                <div class="input-group" id="passwordGroup">
+                    <span class="input-group-text">
+                        <i class="bi bi-lock"></i>
+                    </span>
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="current-password"
+                        minlength="6"
+                        placeholder="Enter your password"
+                    >
+                    <button
+                        class="btn btn-outline-secondary"
+                        type="button"
+                        id="togglePassword"
+                        aria-label="Toggle password visibility"
+                    >
                         <i class="bi bi-eye"></i>
                     </button>
+                    <div class="invalid-feedback">
+                        Please provide your password.
+                    </div>
                 </div>
             </div>
-            
+
             <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                <label class="form-check-label" for="remember">Remember me</label>
+                <input
+                    type="checkbox"
+                    class="form-check-input"
+                    id="remember"
+                    name="remember"
+                >
+                <label class="form-check-label" for="remember">
+                    Remember me on this device
+                </label>
             </div>
-            
+
             <button type="submit" class="btn btn-fml-primary w-100 py-2">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                <i class="bi bi-box-arrow-in-right me-2"></i>
+                Sign in
             </button>
         </form>
-        
+
         <div class="auth-footer">
-            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a></p>
+            <p class="mb-0 small">
+                Don’t have an account?
+                <a href="{{ url_for('auth.register') }}">Request access</a>
+            </p>
         </div>
     </div>
 </div>
@@ -52,19 +111,42 @@
 
 {% block extra_js %}
 <script>
-    document.getElementById('togglePassword').addEventListener('click', function() {
-        const password = document.getElementById('password');
-        const icon = this.querySelector('i');
-        
-        if (password.type === 'password') {
-            password.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        } else {
-            password.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
+    (function () {
+        'use strict';
+
+        // Password visibility toggle (defensive: check element exists)
+        const toggleBtn = document.getElementById('togglePassword');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                const passwordInput = document.getElementById('password');
+                if (!passwordInput) return;
+
+                const icon = this.querySelector('i');
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+
+                if (icon) {
+                    icon.classList.toggle('bi-eye', !isPassword);
+                    icon.classList.toggle('bi-eye-slash', isPassword);
+                }
+            });
         }
-    });
+
+        // Optional: Bootstrap-style client-side validation (non-breaking)
+        const form = document.querySelector('.auth-form.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        }
+    })();
 </script>
 {% endblock %}
+
+
+
+
