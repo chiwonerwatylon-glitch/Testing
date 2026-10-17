@@ -4,16 +4,15 @@
 
 {% block extra_css %}
 <style>
-    /* Keep the batch controls interactive regardless of table or theme styles */
+    /* Keep the selection checkboxes and the code input interactive */
     #batchForm .batch-check,
-    #batchForm input[type="text"],
-    #batchForm #selectAll {
+    #batchForm #selectAll,
+    #batchForm input[name^="code_"] {
         pointer-events: auto;
         position: relative;
         z-index: 1;
-        user-select: auto;
     }
-    #batchForm input[type="text"] { cursor: text; }
+    #batchForm input[name^="code_"] { cursor: text; }
     #batchForm .batch-check, #batchForm #selectAll { cursor: pointer; }
 </style>
 {% endblock %}
@@ -63,8 +62,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th scope="col"><span class="visually-hidden">Select</span></th>
-                                <th scope="col">Reference <span class="fw-normal small text-body-secondary">(editable)</span></th>
-                                <th scope="col">Account name <span class="fw-normal small text-body-secondary">(editable)</span></th>
+                                <th scope="col">Reference</th>
+                                <th scope="col">Account name</th>
                                 <th scope="col">Account number</th>
                                 <th scope="col">Code <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col" class="text-end">Amount</th>
@@ -81,13 +80,11 @@
                                            data-currency="{{ r.currency }}" aria-label="Select {{ r.requisition_number }}">
                                 </td>
                                 <td style="min-width: 220px;">
-                                    <input type="text" class="form-control form-control-sm" name="ref_{{ r.id }}"
-                                           value="{{ ref }}" maxlength="255" aria-label="Reference for {{ r.requisition_number }}">
+                                    <div class="fw-semibold">{{ ref }}</div>
                                     <div class="small text-body-secondary mt-1">{{ r.requisition_number }}</div>
                                 </td>
                                 <td style="min-width: 200px;">
-                                    <input type="text" class="form-control form-control-sm" name="name_{{ r.id }}"
-                                           value="{{ name }}" maxlength="200" aria-label="Account name for {{ r.requisition_number }}">
+                                    <span>{{ name }}</span>
                                 </td>
                                 <td class="font-monospace">{{ r.account_number }}</td>
                                 <td style="min-width: 110px;">
@@ -186,14 +183,6 @@
         var selectAll = document.getElementById('selectAll');
         var checks = document.querySelectorAll('.batch-check');
         var form = document.getElementById('batchForm');
-        if (form) {
-            // Make sure every editable control is enabled and writable
-            form.querySelectorAll('.batch-check, input[type="text"]').forEach(function (el) {
-                el.disabled = false;
-                el.removeAttribute('disabled');
-                el.removeAttribute('readonly');
-            });
-        }
         if (selectAll) {
             selectAll.addEventListener('change', function () {
                 checks.forEach(function (c) { c.checked = selectAll.checked; });

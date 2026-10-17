@@ -761,11 +761,11 @@ def batch_create():
         flash('A batch can only contain one currency.', 'warning')
         return redirect(url_for('requisition.batches'))
 
-    # Account Name and Reference are editable at batching; blank falls back to the defaults
+    # Reference and Account Name come from the requisition and are not editable; only Code can be adjusted
     rows = []
     for r in requisitions:
-        reference = clean_text(request.form.get(f'ref_{r.id}'), default_reference(r), 255)
-        account_name = clean_text(request.form.get(f'name_{r.id}'), default_account_name(r), 200)
+        reference = default_reference(r)
+        account_name = default_account_name(r)
         code = clean_text(request.form.get(f'code_{r.id}'), payment_code(r), 50)
         rows.append((r, reference, account_name, code))
 
