@@ -55,7 +55,9 @@ def dashboard():
         ),
         "pending_approval": (
             Requisition.query.filter(
-                Requisition.status.in_(["pending_approval", "partially_approved"])
+                Requisition.status.in_(
+                    ["pending_approval", "partially_approved"]
+                )
             ).count()
             if current_user.can_approve
             else 0
@@ -74,10 +76,8 @@ def dashboard():
             Requisition.query.filter(
                 (Requisition.initiator_id == current_user.id)
                 | (Requisition.reviewer_id == current_user.id)
-                | (
-                    Requisition.status.in_(
-                        ["pending_approval", "partially_approved"]
-                    )
+                | Requisition.status.in_(
+                    ["pending_approval", "partially_approved"]
                 )
             )
             .order_by(Requisition.created_at.desc())
@@ -103,7 +103,6 @@ def dashboard():
 def create():
     """Create a new requisition."""
     if request.method == "POST":
-        # Ensure user has uploaded a signature
         if not current_user.signature_path:
             flash(
                 "You must upload your signature before creating a requisition. "
@@ -127,7 +126,6 @@ def create():
             status="pending_review",
         )
 
-        # Items
         account_names = request.form.getlist("account_name[]")
         account_codes = request.form.getlist("account_code[]")
         account_locations = request.form.getlist("account_location[]")
@@ -168,8 +166,8 @@ def create():
         requisition.required_approvals = requisition.calculate_required_approvals()
 
         db.session.add(requisition)
+        db.session.flush()  # ensure requisition.id is available
 
-        # Audit log (use flush after we know requisition has an id)
         audit = AuditLog(
             user_id=current_user.id,
             action="create_requisition",
@@ -179,8 +177,6 @@ def create():
             ip_address=request.remote_addr,
         )
         db.session.add(audit)
-
-        db.session.flush()
 
         notify(
             active_users(can_review=True),
@@ -225,10 +221,8 @@ def _base_requisition_query_for_user():
         return query.filter(
             (Requisition.initiator_id == current_user.id)
             | (Requisition.status == "pending_review")
-            | (
-                Requisition.status.in_(
-                    ["pending_approval", "partially_approved"]
-                )
+            | Requisition.status.in_(
+                ["pending_approval", "partially_approved"]
             )
         )
     if current_user.can_review:
@@ -239,10 +233,8 @@ def _base_requisition_query_for_user():
     if current_user.can_approve:
         return query.filter(
             (Requisition.initiator_id == current_user.id)
-            | (
-                Requisition.status.in_(
-                    ["pending_approval", "partially_approved"]
-                )
+            | Requisition.status.in_(
+                ["pending_approval", "partially_approved"]
             )
         )
     return query.filter_by(initiator_id=current_user.id)
@@ -257,7 +249,6 @@ def list():
     status_filter = (request.args.get("status") or "").strip()
 
     query = _base_requisition_query_for_user()
-
     if status_filter:
         query = query.filter_by(status=status_filter)
 
@@ -313,7 +304,9 @@ def detail(id: int):
 # Verification & printing
 # ---------------------------------------------------------------------------
 
-def _document_code(requisition: Requisition, approval_logs: list[ApprovalLog]) -> str:
+def _document_code(
+    requisition: Requisition, approval_logs: list[ApprovalLog]
+) -> str:
     """Tamper-evident document code derived from key fields and approvals."""
     import hashlib
 
@@ -383,7 +376,6 @@ def print_view(id: int):
     signature_code = _document_code(requisition, approval_logs)
     verify_url = url_for("requisition.verify", id=requisition.id, _external=True)
 
-    # Optional QR image
     qr = None
     try:
         import base64
@@ -527,7 +519,6 @@ def approve(id: int):
     ).count()
     next_level = current_approvals + 1
 
-    # Third level must be senior approver
     if next_level == 3 and not current_user.is_senior_approver:
         flash("Only senior approvers can provide the third approval.", "warning")
         return redirect(url_for("requisition.detail", id=id))
@@ -576,7 +567,6 @@ def approve(id: int):
         )
         db.session.add(audit)
 
-        # Notifications based on resulting status
         if requisition.status == "approved":
             notify(
                 [requisition.initiator],
@@ -632,8 +622,7 @@ def download(id: int, format: str):
 
     if format == "pdf":
         buffer = generator.generate_pdf()
-        mimetype = "application/pdf"
-        ext = "pdf"
+        mimetype, ext = "application/pdf", "pdf"
     elif format == "docx":
         buffer = generator.generate_docx()
         mimetype = (
@@ -650,8 +639,7 @@ def download(id: int, format: str):
         ext = "xlsx"
     elif format == "csv":
         buffer = generator.generate_csv()
-        mimetype = "text/csv"
-        ext = "csv"
+        mimetype, ext = "text/csv", "csv"
     else:
         flash("Invalid format requested.", "danger")
         return redirect(url_for("requisition.detail", id=id))
@@ -720,11 +708,11 @@ def _report_query(filters):
         query = query.filter(Requisition.currency == currency)
     if initiator:
         try:
-            query = query.filter(
-                Requisition.initiator_id == int(initiator)
-            )
+            initiator_id = int(initiator)
         except ValueError:
-            pass
+            initiator_id = None
+        if initiator_id:
+            query = query.filter(Requisition.initiator_id == initiator_id)
 
     if date_from_str:
         date_from = _parse_date(date_from_str)
@@ -1171,8 +1159,6 @@ def batch_create():
         flash("A batch can only contain one currency.", "warning")
         return redirect(url_for("requisition.batches"))
 
-    # Reference and Account Name come from the requisition and are not editable;
-    # only Code can be adjusted.
     rows = []
     for r in requisitions:
         reference = default_reference(r)
@@ -1276,4 +1262,3 @@ def batch_download(id: int, fmt: str):
     ]
 
     return _batch_response(batch, rows, fmt)
-
