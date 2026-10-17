@@ -133,11 +133,17 @@
 
         {# Batching section #}
         {% if current_user.role == 'superuser' or current_user.can_review or current_user.can_approve %}
-        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">Batching</div>
+        <div class="text-uppercase small fw-semibold text-body-secondary px-2 mb-2">
+            Batching
+        </div>
         <ul class="nav nav-pills flex-column gap-1 mb-3">
             <li class="nav-item">
-                <a class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.batches' }}" href="{{ url_for('requisition.batches') }}">
-                    <i class="bi bi-box-seam me-2"></i>Batches
+                <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint == 'requisition.batches' }}"
+                    href="{{ url_for('requisition.batches') }}"
+                >
+                    <i class="bi bi-box-seam me-2"></i>
+                    Batches
                 </a>
             </li>
         </ul>
