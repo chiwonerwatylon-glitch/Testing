@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy.exc import IntegrityError
 import os
 
 db = SQLAlchemy()
@@ -119,5 +120,11 @@ def seed_superuser(app):
             is_senior_approver=True,
         )
         db.session.add(superuser)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            # Another gunicorn worker created the same admin at boot. Not an error.
+            db.session.rollback()
+            app.logger.info('Superuser %s already created by another worker.', email)
+            return
         app.logger.info('Created superuser: %s', email)
