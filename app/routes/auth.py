@@ -32,8 +32,7 @@ def login():
     if request.method == "POST":
         email = (request.form.get("email") or "").strip()
         password = request.form.get("password") or ""
-        remember_raw = request.form.get("remember")
-        remember = bool(remember_raw)  # checkbox -> True/False
+        remember = bool(request.form.get("remember"))  # checkbox -> True/False
 
         user = User.query.filter_by(email=email).first()
 
