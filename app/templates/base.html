@@ -21,7 +21,9 @@
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 
     <style>
-        :root { --fml-brand: #D21F3C; }
+        :root { --fml-brand: #D21F3C; --footer-h: 44px; }
+        body { padding-bottom: var(--footer-h); }
+        .app-footer { height: var(--footer-h); z-index: 1020; }
         .text-brand { color: var(--fml-brand) !important; }
         .btn-brand { --bs-btn-color: #fff; --bs-btn-bg: var(--fml-brand); --bs-btn-border-color: var(--fml-brand);
                      --bs-btn-hover-bg: #A01830; --bs-btn-hover-border-color: #A01830; --bs-btn-hover-color: #fff;
@@ -31,9 +33,9 @@
         .sidebar-link { border-radius: .5rem; color: var(--bs-body-color); }
         .sidebar-link:hover { background: var(--bs-tertiary-bg); }
         .sidebar-link.active { background: rgba(210, 31, 60, .12); color: var(--fml-brand); font-weight: 600; }
-        .app-main { min-height: calc(100vh - 56px - 52px); }
+        .app-main { min-height: calc(100vh - 56px - var(--footer-h)); }
         @media (min-width: 992px) {
-            .sidebar-col { position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; }
+            .sidebar-col { position: sticky; top: 56px; height: calc(100vh - 56px - var(--footer-h)); overflow-y: auto; }
         }
     </style>
 
@@ -76,8 +78,8 @@
         </main>
     {% endif %}
 
-    <footer class="border-top bg-body py-2 mt-auto no-print">
-        <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center small text-body-secondary gap-2">
+    <footer class="fixed-bottom border-top bg-body no-print app-footer">
+        <div class="container-fluid h-100 d-flex flex-wrap justify-content-between align-items-center small text-body-secondary gap-2">
             <span>&copy; {{ current_year or 2026 }} First Mutual Life Assurance Company (Zimbabwe)</span>
             <span>Requisition System v{{ app_version or '1.0' }}</span>
         </div>
