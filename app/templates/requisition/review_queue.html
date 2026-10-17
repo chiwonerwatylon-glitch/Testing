@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Review Queue - FML Requisition System{% endblock %}
+
+{% block content %}
+{% set stage_map = {
+    'pending_review': ('Awaiting review', 'bg-info text-dark'),
+    'pending_approval': ('Awaiting approval', 'bg-warning text-dark'),
+    'partially_approved': ('Partially approved', 'bg-primary'),
+    'approved': ('Completed', 'bg-success'),
+    'rejected': ('Rejected', 'bg-danger')
+} %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+        <div>
+            <div class="text-uppercase small fw-bold text-danger">Reviewer workspace</div>
+            <h2 class="mb-0">Review Queue</h2>
+            <div class="text-muted">Track every requisition from review through approval.</div>
+        </div>
+        <div class="row g-3">
+            <div class="col-sm-4">
+                <div class="card shadow-sm border-start border-4 border-info h-100">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="small text-muted">Pending review</div>
+                            <div class="fs-3 fw-bold">{{ counts.pending }}</div>
+                        </div>
+                        <i class="bi bi-hourglass-split text-info fs-4"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card shadow-sm border-start border-4 border-warning h-100">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="small text-muted">Awaiting approval</div>
+                            <div class="fs-3 fw-bold">{{ counts.awaiting_approval }}</div>
+                        </div>
+                        <i class="bi bi-people text-warning fs-4"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card shadow-sm border-start border-4 border-success h-100">
+                    <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="small text-muted">Completed</div>
+                            <div class="fs-3 fw-bold">{{ counts.completed }}</div>
+                        </div>
+                        <i class="bi bi-check2-circle text-success fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-group w-100 mb-3" role="group">
+        {% for key, label, count in tabs %}
+        <a class="btn {{ 'btn-dark active' if queue_tab == key else 'btn-outline-secondary' }}" href="{{ url_for('requisition.review_queue', tab=key) }}">
+            {{ label }} <span class="badge bg-secondary ms-1">{{ count }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Requisition</th>
+                            <th>Payee</th>
+                            <th>Amount</th>
+                            <th>Initiator</th>
+                            <th>Stage</th>
+                            <th>Approvals</th>
+                            <th>Submitted</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requisitions.items %}
+                        {% set stage = stage_map.get(req.status, (req.status.replace('_', ' ').title(), 'bg-secondary')) %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ req.requisition_number }}</div>
+                                <div class="small text-muted">{{ req.items.count() }} line item(s)</div>
+                            </td>
+                            <td>{{ req.in_favor_of }}</td>
+                            <td><span class="fw-semibold">{{ req.currency }} {{ '{:,.2f}'.format(req.total_debit or 0) }}</span></td>
+                            <td>{{ req.initiator.full_name }}</td>
+                            <td><span class="badge {{ stage[1] }}">{{ stage[0] }}</span></td>
+                            <td>
+                                {% if req.required_approvals %}
+                                <div class="small mb-1">{{ req.current_approvals }}/{{ req.required_approvals }}</div>
+                                <div class="progress" style="height:6px;width:90px"><div class="progress-bar bg-success" style="width: {{ (req.current_approvals / req.required_approvals * 100)|round|int }}%"></div></div>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ req.created_at.strftime('%d %b %Y') }}</td>
+                            <td class="text-nowrap">
+                                <a class="btn btn-sm btn-dark" href="{{ url_for('requisition.detail', id=req.id) }}">Open</a>
+                                {% if req.status == 'pending_review' %}
+                                <a class="btn btn-sm btn-fml-primary" href="{{ url_for('requisition.review', id=req.id) }}">Review</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8"><div class="text-center py-5 text-muted"><i class="bi bi-inbox display-5 d-block mb-2"></i>Nothing in this queue.</div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if requisitions.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-end mb-0">
+                    {% if requisitions.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('requisition.review_queue', page=requisitions.prev_num, tab=queue_tab) }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for page_num in requisitions.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == requisitions.page }}">
+                                <a class="page-link" href="{{ url_for('requisition.review_queue', page=page_num, tab=queue_tab) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if requisitions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('requisition.review_queue', page=requisitions.next_num, tab=queue_tab) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

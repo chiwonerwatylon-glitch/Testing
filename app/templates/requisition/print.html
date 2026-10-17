@@ -4,33 +4,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Requisition {{ requisition.requisition_number }}</title>
+    <title>{{ requisition.requisition_number }} - Payment Requisition</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <style>
-        @page { size: A4; margin: 12mm; }
-        html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @page { size: A4; margin: 14mm 12mm 16mm 12mm; }
+        html, body { background: #fff !important; color: #111 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-size: 11pt; }
+        .print-doc { max-width: 190mm; margin: 0 auto; }
+        .doc-control { border: 1px solid #1a1a1a; font-size: 9pt; }
+        .doc-control td { padding: 4px 8px; border: 1px solid #ccc; }
+        .doc-footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 8pt; color: #555; border-top: 1px solid #ccc; padding-top: 4px; }
+        .req-signature-block, .req-sec, .req-security { break-inside: avoid; }
         @media print { .no-print { display: none !important; } .card { box-shadow: none !important; border: 0 !important; } }
     </style>
 </head>
 <body>
-    <div class="container-fluid py-4">
-        <div class="no-print mb-3 text-end"><button type="button" class="btn btn-dark" onclick="window.print()"><i class="bi bi-printer me-2"></i>Print</button></div>
-        {% if workflow %}
-        <section class="mb-3">
-            <ul class="list-unstyled">
-                {% for stage in workflow %}
-                <li>{{ stage.label }}: {{ stage.completed_by or 'Pending' }}</li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
-        <div class="card shadow-sm requisition-document">
-            <div class="card-body p-4 p-md-5">
-                {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
-            </div>
-        </div>
+    <div class="no-print d-flex justify-content-end gap-2 p-3">
+        <button class="btn btn-dark" onclick="window.print()"><i class="bi bi-printer me-2"></i>Print / Save as PDF</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('requisition.detail', id=requisition.id) }}">Back</a>
     </div>
+
+    <div class="print-doc">
+        <table class="doc-control w-100 mb-4">
+            <tbody>
+                <tr>
+                    <td class="fw-bold">Requisition No</td>
+                    <td>{{ requisition.requisition_number }}</td>
+                    <td class="fw-bold">Currency</td>
+                    <td>{{ requisition.currency }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold">Document code</td>
+                    <td class="font-monospace">{{ signature_code }}</td>
+                    <td class="fw-bold">Authorised amount</td>
+                    <td>{{ requisition.currency ~ ' ' ~ '{:,.2f}'.format(requisition.total_debit or 0) }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold">Status</td>
+                    <td>{{ requisition.status.replace('_', ' ').title() }}</td>
+                    <td class="fw-bold">Required approvals</td>
+                    <td>{{ requisition.required_approvals }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold">Date created</td>
+                    <td>{{ requisition.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                    <td class="fw-bold">Date completed</td>
+                    <td>{{ requisition.completed_at.strftime('%d %b %Y %H:%M') if requisition.completed_at else '-' }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold">Printed by</td>
+                    <td>{{ printed_by }}</td>
+                    <td class="fw-bold">Printed at</td>
+                    <td>{{ printed_at.strftime('%d %b %Y %H:%M UTC') }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold">Verify at</td>
+                    <td colspan="3" class="font-monospace">{{ url_for('requisition.verify', id=requisition.id, _external=True) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        {{ render_requisition_document(requisition, approval_logs, pending_approvals, show_progress=False, qr=qr, signature_code=signature_code) }}
+    </div>
+
+    <div class="doc-footer text-center">First Mutual Life Assurance Company &middot; Payment Requisition {{ requisition.requisition_number }} &middot; Document code {{ signature_code }} &middot; Verify with the QR code</div>
 </body>
 </html>
