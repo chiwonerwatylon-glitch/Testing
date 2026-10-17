@@ -251,6 +251,15 @@
                                 Request an account
                             </a>
                         </p>
+                        <p class="text-center small mt-2 mb-0">
+                            <button
+                                type="button"
+                                class="btn btn-link btn-sm p-0 text-body-secondary"
+                                data-bs-toggle="offcanvas"
+                                data-bs-target="#loginHelp"
+                                aria-controls="loginHelp"
+                            ><i class="bi bi-question-circle me-1"></i>Need help?</button>
+                        </p>
                     </div>
                 </div>
 
@@ -268,6 +277,30 @@
                 &copy; {{ current_year or 2026 }} First Mutual Life Assurance Company (Zimbabwe)
             </div>
         </footer>
+    </div>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="loginHelp" aria-labelledby="loginHelpLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="loginHelpLabel">Sign-in help</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <p class="small text-body-secondary">
+                Ask a question about signing in, requesting an account, or using the requisition system.
+            </p>
+            <div class="mb-3">
+                <textarea
+                    id="helpQuestion"
+                    class="form-control"
+                    rows="3"
+                    maxlength="1000"
+                    aria-label="Your question"
+                ></textarea>
+            </div>
+            <button type="button" id="helpAskBtn" class="btn btn-brand w-100">Ask</button>
+            <div id="helpAnswer" class="border rounded p-3 mt-3 bg-body-tertiary d-none" style="white-space: pre-wrap;"></div>
+            <div id="helpStatus" class="small text-danger mt-2" role="status"></div>
+        </div>
     </div>
 
     <script
@@ -340,6 +373,75 @@
                     syncIcon();
                 });
             }
+        })();
+
+        // Public "Need help?" assistant
+        (function () {
+            'use strict';
+
+            var btn = document.getElementById('helpAskBtn');
+            var input = document.getElementById('helpQuestion');
+            var answerBox = document.getElementById('helpAnswer');
+            var statusBox = document.getElementById('helpStatus');
+            if (!btn || !input || !answerBox || !statusBox) {
+                return;
+            }
+
+            function getCsrfToken() {
+                var meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta && meta.content) {
+                    return meta.content;
+                }
+                var field = document.querySelector('input[name="csrf_token"]');
+                return field ? field.value : '';
+            }
+
+            btn.addEventListener('click', async function () {
+                var question = input.value.trim();
+                statusBox.textContent = '';
+
+                if (!question) {
+                    statusBox.textContent = 'Please enter a question.';
+                    return;
+                }
+
+                btn.disabled = true;
+                answerBox.classList.remove('d-none');
+                answerBox.textContent = 'Thinking...';
+
+                try {
+                    var response = await fetch("{{ url_for('auth.help_ask') }}", {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({ question: question })
+                    });
+
+                    var data = {};
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        data = {};
+                    }
+
+                    if (response.ok && data.answer) {
+                        answerBox.textContent = data.answer;
+                    } else {
+                        answerBox.classList.add('d-none');
+                        answerBox.textContent = '';
+                        statusBox.textContent = data.error || 'The assistant is unavailable right now.';
+                    }
+                } catch (err) {
+                    answerBox.classList.add('d-none');
+                    answerBox.textContent = '';
+                    statusBox.textContent = 'The assistant is unavailable right now.';
+                } finally {
+                    btn.disabled = false;
+                }
+            });
         })();
     </script>
 </body>

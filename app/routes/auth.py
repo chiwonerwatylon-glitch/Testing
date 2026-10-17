@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import threading
+import time
+from http import HTTPStatus
+from typing import Dict, List
+
 from flask import (
     Blueprint,
     render_template,
     redirect,
     url_for,
     flash,
+    jsonify,
     request,
 )
 from flask_login import (
@@ -18,9 +24,37 @@ from werkzeug.security import generate_password_hash
 
 from app import db
 from app.models import User, AuditLog
+from app.routes.assistant import (
+    UNAVAILABLE_MESSAGE,
+    _parse_request_json,
+)
+from app.utils.gemini import ask_gemini, GeminiError
 from app.utils.helpers import save_signature
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+LOGIN_HELP_CONTEXT: str = (
+    "You are the help assistant on the First Mutual Life Requisition System "
+    "sign-in page. Answer briefly, in under 120 words, about: signing in; "
+    "creating an account (admin approval is required, and new accounts are "
+    "inactive until an administrator approves them); password help (users "
+    "should contact an administrator; users cannot reset their own password "
+    "without administrator help, and you must not invent a self-service reset "
+    "flow); and general questions about requisitions. Never reveal internal "
+    "data, user data, passwords, or administrator contacts you do not have. "
+    "If you are unsure, say so and tell the user to contact their "
+    "administrator."
+)
+
+HELP_RATE_MAX_REQUESTS: int = 10
+HELP_RATE_WINDOW_SECONDS: int = 10 * 60
+HELP_RATE_LIMIT_MESSAGE: str = (
+    "Too many questions. Please wait a few minutes and try again."
+)
+
+# Interim in-process rate limiter state, keyed by client IP.
+_help_requests: Dict[str, List[float]] = {}
+_help_rate_lock = threading.Lock()
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -196,3 +230,55 @@ def profile():
         return redirect(url_for("auth.profile"))
 
     return render_template("auth/profile.html")
+
+
+def _rate_limited(ip: str) -> bool:
+    """Record a request for ``ip`` and return True if it exceeds the limit.
+
+    Interim in-process guard: state is per worker, so limits are only
+    approximate under multiple gunicorn workers.
+    """
+    now = time.monotonic()
+    cutoff = now - HELP_RATE_WINDOW_SECONDS
+    with _help_rate_lock:
+        # Prune expired timestamps across all IPs to bound memory use.
+        for key in list(_help_requests.keys()):
+            recent = [t for t in _help_requests[key] if t > cutoff]
+            if recent:
+                _help_requests[key] = recent
+            else:
+                del _help_requests[key]
+
+        timestamps = _help_requests.setdefault(ip, [])
+        if len(timestamps) >= HELP_RATE_MAX_REQUESTS:
+            return True
+        timestamps.append(now)
+        return False
+
+
+@auth_bp.route("/help/ask", methods=["POST"])
+def help_ask():
+    """Public sign-in help assistant (no login required)."""
+    ip = request.remote_addr or "unknown"
+    if _rate_limited(ip):
+        return (
+            jsonify({"error": HELP_RATE_LIMIT_MESSAGE}),
+            HTTPStatus.TOO_MANY_REQUESTS,
+        )
+
+    question, error_response = _parse_request_json()
+    if error_response is not None:
+        body, status = error_response
+        return jsonify(body), status
+
+    assert question is not None
+
+    try:
+        answer = ask_gemini(question, LOGIN_HELP_CONTEXT, "")
+    except (GeminiError, RuntimeError):
+        return (
+            jsonify({"error": UNAVAILABLE_MESSAGE}),
+            HTTPStatus.SERVICE_UNAVAILABLE,
+        )
+
+    return jsonify({"answer": answer}), HTTPStatus.OK
