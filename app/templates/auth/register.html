@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Register - First Mutual Life Requisition System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card auth-card-wide">
+        <div class="auth-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FML Logo" class="auth-logo" onerror="this.style.display='none'">
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Join the FML Requisition System</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="first_name" class="form-label">First Name *</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="last_name" class="form-label">Last Name *</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email Address *</label>
+                    <input type="email" class="form-control" id="email" name="email" required placeholder="your.email@firstmutual.co.zw">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="employee_id" class="form-label">Employee ID *</label>
+                    <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="department" class="form-label">Department *</label>
+                    <select class="form-select" id="department" name="department" required>
+                        <option value="">Select Department</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Human Resources">Human Resources</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Claims">Claims</option>
+                        <option value="Underwriting">Underwriting</option>
+                        <option value="Legal">Legal</option>
+                        <option value="Administration">Administration</option>
+                        <option value="Executive">Executive</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="position" class="form-label">Position</label>
+                    <input type="text" class="form-control" id="position" name="position">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="phone" name="phone">
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Password *</label>
+                    <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                    <div class="form-text">Minimum 8 characters</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="confirm_password" class="form-label">Confirm Password *</label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="signature" class="form-label">Upload Signature (Optional - can be added later)</label>
+                <input type="file" class="form-control" id="signature" name="signature" accept="image/*">
+                <div class="form-text">Upload your signature image (PNG, JPG, GIF). Max 5MB.</div>
+                <div id="signature-preview" class="mt-2"></div>
+            </div>
+            
+            <button type="submit" class="btn btn-fml-primary w-100 py-2">
+                <i class="bi bi-person-plus me-2"></i>Register
+            </button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('signature').addEventListener('change', function(e) {
+        const preview = document.getElementById('signature-preview');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" class="signature-preview-img" alt="Signature Preview">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.innerHTML = '';
+        }
+    });
+    
+    document.getElementById('confirm_password').addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        if (this.value !== password) {
+            this.setCustomValidity('Passwords do not match');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+</script>
+{% endblock %}

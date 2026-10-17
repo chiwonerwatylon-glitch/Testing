@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-fml-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>My Profile</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <!-- Profile Info (Read-only) -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Full Name</label>
+                                <p class="form-control-plaintext fw-bold">{{ current_user.full_name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Email</label>
+                                <p class="form-control-plaintext">{{ current_user.email }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Employee ID</label>
+                                <p class="form-control-plaintext">{{ current_user.employee_id }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Department</label>
+                                <p class="form-control-plaintext">{{ current_user.department }}</p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Editable Fields -->
+                        <h5 class="mb-3">Editable Information</h5>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="position" class="form-label">Position</label>
+                                <input type="text" class="form-control" id="position" name="position" value="{{ current_user.position or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" value="{{ current_user.phone or '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Signature -->
+                        <div class="mb-4">
+                            <label for="signature" class="form-label">Signature</label>
+                            {% if current_user.signature_path %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename='signatures/' + current_user.signature_path) }}" 
+                                     alt="Current Signature" class="signature-display">
+                                <span class="badge bg-success ms-2">Signature Uploaded</span>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No signature uploaded. You need to upload your signature to initiate, review, or approve requisitions.
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="signature" name="signature" accept="image/*">
+                            <div class="form-text">Upload a new signature to replace the existing one</div>
+                            <div id="signature-preview" class="mt-2"></div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Password Change -->
+                        <h5 class="mb-3">Change Password</h5>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="current_password" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="confirm_new_password" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password">
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Permissions Display -->
+                        <h5 class="mb-3">My Permissions</h5>
+                        <div class="row mb-4">
+                            <div class="col-auto">
+                                <span class="badge {{ 'bg-success' if current_user.can_initiate else 'bg-secondary' }} p-2">
+                                    <i class="bi bi-{{ 'check' if current_user.can_initiate else 'x' }}-circle me-1"></i>
+                                    Initiate Requisitions
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge {{ 'bg-success' if current_user.can_review else 'bg-secondary' }} p-2">
+                                    <i class="bi bi-{{ 'check' if current_user.can_review else 'x' }}-circle me-1"></i>
+                                    Review Requisitions
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge {{ 'bg-success' if current_user.can_approve else 'bg-secondary' }} p-2">
+                                    <i class="bi bi-{{ 'check' if current_user.can_approve else 'x' }}-circle me-1"></i>
+                                    Approve Requisitions
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge {{ 'bg-success' if current_user.is_senior_approver else 'bg-secondary' }} p-2">
+                                    <i class="bi bi-{{ 'check' if current_user.is_senior_approver else 'x' }}-circle me-1"></i>
+                                    Senior Approver
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-fml-primary">
+                            <i class="bi bi-save me-2"></i>Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('signature').addEventListener('change', function(e) {
+        const preview = document.getElementById('signature-preview');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" class="signature-preview-img" alt="Signature Preview">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.innerHTML = '';
+        }
+    });
+</script>
+{% endblock %}

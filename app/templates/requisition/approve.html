@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Approve Requisition - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-fml-primary text-white py-3">
+                    <h4 class="mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Approve Requisition: {{ requisition.requisition_number }}
+                        <span class="badge bg-light text-dark ms-2">Approval Level {{ approval_level }}</span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if approval_level == 3 %}
+                    <div class="alert alert-primary">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Senior Approval Required:</strong> This is the final (3rd) approval, 
+                        required because the amount is ${{ '{:,.2f}'.format(requisition.total_debit) }} 
+                        (≥ $5,000 USD threshold).
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr><td class="fw-bold">In Favor Of:</td><td>{{ requisition.in_favor_of }}</td></tr>
+                                <tr><td class="fw-bold">Bank:</td><td>{{ requisition.bank_name }}</td></tr>
+                                <tr><td class="fw-bold">Account:</td><td>{{ requisition.account_number }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr><td class="fw-bold">Initiator:</td><td>{{ requisition.initiator.full_name }}</td></tr>
+                                <tr><td class="fw-bold">Reviewer:</td><td>{{ requisition.reviewer.full_name if requisition.reviewer }}</td></tr>
+                                <tr><td class="fw-bold">Total Amount:</td><td class="fw-bold text-fml-primary">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Reason for Payment:</strong>
+                        <p>{{ requisition.reason_for_payment }}</p>
+                    </div>
+                    
+                    {% if requisition.review_comments %}
+                    <div class="alert alert-light border">
+                        <strong>Reviewer's Comments:</strong>
+                        <p class="mb-0">{{ requisition.review_comments }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Previous Approvals -->
+                    {% if requisition.current_approvals > 0 %}
+                    <div class="mb-3">
+                        <strong>Previous Approvals:</strong>
+                        {% for log in requisition.approval_logs.filter_by(action='approved').order_by('approval_level') %}
+                        <div class="d-flex align-items-center mt-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Level {{ log.approval_level }}: {{ log.approver.full_name }} 
+                            ({{ log.created_at.strftime('%Y-%m-%d %H:%M') }})
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('requisition.detail', id=requisition.id) }}" class="btn btn-outline-secondary mb-4">
+                        <i class="bi bi-file-text me-2"></i>View Full Document
+                    </a>
+                    
+                    <hr>
+                    
+                    <!-- Approval Form -->
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="comments" class="form-label">Comments</label>
+                            <textarea class="form-control" id="comments" name="comments" rows="3" 
+                                      placeholder="Add any comments regarding your decision..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            By clicking "Approve", your signature will be automatically applied with 
+                            today's date as Approval Level {{ approval_level }}.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" name="action" value="rejected" class="btn btn-danger"
+                                    onclick="return confirm('Are you sure you want to reject this requisition?')">
+                                <i class="bi bi-x-circle me-2"></i>Reject
+                            </button>
+                            <button type="submit" name="action" value="approved" class="btn btn-fml-primary">
+                                <i class="bi bi-check-circle me-2"></i>Approve
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

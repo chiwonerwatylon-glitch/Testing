@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from 'components/requisition_template.html' import render_requisition_document %}
+
+{% block title %}Requisition {{ requisition.requisition_number }} - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-1">{{ requisition.requisition_number }}</h2>
+        </div>
+
+        <div class="btn-group flex-wrap">
+            {% if requisition.status == 'pending_review' and current_user.can_review %}
+            <a href="{{ url_for('requisition.review', id=requisition.id) }}" class="btn btn-fml-primary">
+                <i class="bi bi-eye me-2"></i>Review
+            </a>
+            {% endif %}
+
+            {% if requisition.status in ['pending_approval', 'partially_approved'] and current_user.can_approve %}
+            <a href="{{ url_for('requisition.approve', id=requisition.id) }}" class="btn btn-fml-primary">
+                <i class="bi bi-check-circle me-2"></i>Approve/Reject
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('requisition.print_view', id=requisition.id) }}" target="_blank" class="btn btn-outline-dark">
+                <i class="bi bi-printer me-2"></i>Print View
+            </a>
+
+            {% if requisition.status == 'approved' %}
+            <div class="btn-group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-download me-2"></i>Download
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ url_for('requisition.download', id=requisition.id, format='pdf') }}">
+                        <i class="bi bi-file-pdf me-2"></i>PDF
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('requisition.download', id=requisition.id, format='docx') }}">
+                        <i class="bi bi-file-word me-2"></i>Word (DOCX)
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('requisition.download', id=requisition.id, format='xlsx') }}">
+                        <i class="bi bi-file-excel me-2"></i>Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('requisition.download', id=requisition.id, format='csv') }}">
+                        <i class="bi bi-filetype-csv me-2"></i>CSV
+                    </a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Requisition Document (using shared component) -->
+    <div class="card shadow-sm requisition-document">
+        <div class="card-body p-4 p-md-5">
+            {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
+        </div>
+    </div>
+
+    <!-- Review Comments -->
+    {% if requisition.review_comments %}
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6><i class="bi bi-chat-left-text me-2"></i>Review Comments</h6>
+            <p class="mb-0">{{ requisition.review_comments }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Approval Comments -->
+    {% for log in approval_logs %}
+        {% if log.comments %}
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6><i class="bi bi-chat-left-text me-2"></i>{{ log.approver.full_name }}'s Comments (Level {{ log.approval_level }})</h6>
+                <p class="mb-0">{{ log.comments }}</p>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

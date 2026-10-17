@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title|default('All Requisitions') }} - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-list-ul me-2"></i>{{ title|default('All Requisitions') }}</h2>
+        {% if current_user.can_initiate %}
+        <a href="{{ url_for('requisition.create') }}" class="btn btn-fml-primary">
+            <i class="bi bi-plus-circle me-2"></i>New Requisition
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Status Filter</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        <option value="draft" {{ 'selected' if status_filter == 'draft' }}>Draft</option>
+                        <option value="pending_review" {{ 'selected' if status_filter == 'pending_review' }}>Pending Review</option>
+                        <option value="pending_approval" {{ 'selected' if status_filter == 'pending_approval' }}>Pending Approval</option>
+                        <option value="partially_approved" {{ 'selected' if status_filter == 'partially_approved' }}>Partially Approved</option>
+                        <option value="approved" {{ 'selected' if status_filter == 'approved' }}>Approved</option>
+                        <option value="rejected" {{ 'selected' if status_filter == 'rejected' }}>Rejected</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Requisitions Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Requisition No.</th>
+                            <th>In Favor Of</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Initiator</th>
+                            <th>Approvals</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requisitions.items %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('requisition.detail', id=req.id) }}" class="fw-bold text-decoration-none">
+                                    {{ req.requisition_number }}
+                                </a>
+                            </td>
+                            <td>{{ req.in_favor_of }}</td>
+                            <td>{{ req.currency }} {{ '{:,.2f}'.format(req.total_debit) }}</td>
+                            <td>
+                                {% set status_classes = {
+                                    'draft': 'bg-secondary',
+                                    'pending_review': 'bg-info',
+                                    'pending_approval': 'bg-warning',
+                                    'partially_approved': 'bg-primary',
+                                    'approved': 'bg-success',
+                                    'rejected': 'bg-danger'
+                                } %}
+                                <span class="badge {{ status_classes.get(req.status, 'bg-secondary') }}">
+                                    {{ req.status.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td>{{ req.initiator.full_name }}</td>
+                            <td>
+                                {% if req.status in ['pending_approval', 'partially_approved', 'approved'] %}
+                                <span class="badge bg-light text-dark">
+                                    {{ req.current_approvals }}/{{ req.required_approvals }}
+                                </span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ req.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('requisition.detail', id=req.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                No requisitions found
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if requisitions.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if requisitions.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.prev_num, status=status_filter) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in requisitions.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == requisitions.page }}">
+                                <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, status=status_filter) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if requisitions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.next_num, status=status_filter) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

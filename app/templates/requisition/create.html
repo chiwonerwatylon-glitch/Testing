@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Create Requisition - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            <div class="card shadow-sm">
+                <div class="card-header bg-fml-primary text-white py-3">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Requisition</h4>
+                </div>
+                <div class="card-body">
+                    {% if not current_user.signature_path %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        You need to upload your signature before creating a requisition.
+                        <a href="{{ url_for('auth.profile') }}" class="alert-link">Upload now</a>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST" id="requisitionForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <!-- Payment Details -->
+                        <div class="requisition-section">
+                            <h5 class="section-title"><i class="bi bi-bank me-2"></i>Payment Details</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="in_favor_of" class="form-label">In Favor Of *</label>
+                                    <input type="text" class="form-control" id="in_favor_of" name="in_favor_of" 
+                                           value="First Mutual Life" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="currency" class="form-label">Currency *</label>
+                                    <select class="form-select" id="currency" name="currency" required>
+                                        <option value="USD" selected>USD - US Dollar</option>
+                                        <option value="ZWL">ZWL - Zimbabwe Dollar</option>
+                                        <option value="ZAR">ZAR - South African Rand</option>
+                                        <option value="BWP">BWP - Botswana Pula</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="bank_name" class="form-label">Bank Name *</label>
+                                    <input type="text" class="form-control" id="bank_name" name="bank_name" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="branch" class="form-label">Branch *</label>
+                                    <input type="text" class="form-control" id="branch" name="branch" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="account_number" class="form-label">Account Number *</label>
+                                    <input type="text" class="form-control" id="account_number" name="account_number" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reason_for_payment" class="form-label">Reason for Payment *</label>
+                                <textarea class="form-control" id="reason_for_payment" name="reason_for_payment" 
+                                          rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">ITF 263 *</label>
+                                <div class="btn-group d-block" role="group">
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_yes" value="Yes">
+                                    <label class="btn btn-outline-primary" for="itf_yes">Yes</label>
+                                    
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_no" value="No">
+                                    <label class="btn btn-outline-primary" for="itf_no">No</label>
+                                    
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_na" value="NA" checked>
+                                    <label class="btn btn-outline-primary" for="itf_na">N/A</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Account Items -->
+                        <div class="requisition-section">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="section-title mb-0"><i class="bi bi-table me-2"></i>Account Details</h5>
+                                <button type="button" class="btn btn-sm btn-fml-secondary" id="addItemBtn">
+                                    <i class="bi bi-plus-circle me-1"></i>Add Item
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="itemsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="min-width: 150px;">Account Name</th>
+                                            <th style="min-width: 120px;">Account Code</th>
+                                            <th style="min-width: 120px;">Location</th>
+                                            <th style="min-width: 120px;">Department</th>
+                                            <th style="min-width: 180px;">Details</th>
+                                            <th style="min-width: 110px;">Debit</th>
+                                            <th style="min-width: 110px;">Credit</th>
+                                            <th style="width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsTableBody">
+                                        <tr class="item-row">
+                                            <td><input type="text" class="form-control form-control-sm" name="account_name[]" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_code[]" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_location[]"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_department[]"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="details[]"></td>
+                                            <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]"></td>
+                                            <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]"></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-light fw-bold">
+                                            <td colspan="5" class="text-end">TOTALS:</td>
+                                            <td id="totalDebit">0.00</td>
+                                            <td id="totalCredit">0.00</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-info mt-2" id="approvalInfo">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <span id="approvalText">This requisition will require 2 approvers (amount below $5,000)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('requisition.dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-fml-primary" {{ 'disabled' if not current_user.signature_path }}>
+                                <i class="bi bi-send me-2"></i>Submit Requisition
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tableBody = document.getElementById('itemsTableBody');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const currencySelect = document.getElementById('currency');
+    
+    function createRow() {
+        const row = document.createElement('tr');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm" name="account_name[]" required></td>
+            <td><input type="text" class="form-control form-control-sm" name="account_code[]" required></td>
+            <td><input type="text" class="form-control form-control-sm" name="account_location[]"></td>
+            <td><input type="text" class="form-control form-control-sm" name="account_department[]"></td>
+            <td><input type="text" class="form-control form-control-sm" name="details[]"></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]"></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]"></td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        return row;
+    }
+    
+    function calculateTotals() {
+        let totalDebit = 0;
+        let totalCredit = 0;
+        
+        document.querySelectorAll('.debit-input').forEach(input => {
+            totalDebit += parseFloat(input.value) || 0;
+        });
+        
+        document.querySelectorAll('.credit-input').forEach(input => {
+            totalCredit += parseFloat(input.value) || 0;
+        });
+        
+        document.getElementById('totalDebit').textContent = totalDebit.toFixed(2);
+        document.getElementById('totalCredit').textContent = totalCredit.toFixed(2);
+        
+        updateApprovalInfo(totalDebit);
+    }
+    
+    function updateApprovalInfo(amount) {
+        const currency = currencySelect.value;
+        const approvalText = document.getElementById('approvalText');
+        
+        if (currency === 'USD' && amount >= 5000) {
+            approvalText.textContent = `This requisition will require 3 approvers (amount: $${amount.toFixed(2)} - above $5,000)`;
+        } else {
+            approvalText.textContent = `This requisition will require 2 approvers (amount: ${currency} ${amount.toFixed(2)})`;
+        }
+    }
+    
+    addItemBtn.addEventListener('click', function() {
+        tableBody.appendChild(createRow());
+        attachEventListeners();
+    });
+    
+    function attachEventListeners() {
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+            btn.removeEventListener('click', removeRow);
+            btn.addEventListener('click', removeRow);
+        });
+        
+        document.querySelectorAll('.debit-input, .credit-input').forEach(input => {
+            input.removeEventListener('input', calculateTotals);
+            input.addEventListener('input', calculateTotals);
+        });
+    }
+    
+    function removeRow(e) {
+        const rows = document.querySelectorAll('.item-row');
+        if (rows.length > 1) {
+            e.target.closest('tr').remove();
+            calculateTotals();
+        } else {
+            alert('At least one item is required.');
+        }
+    }
+    
+    currencySelect.addEventListener('change', calculateTotals);
+    
+    attachEventListeners();
+    calculateTotals();
+    
+    // Form validation
+    document.getElementById('requisitionForm').addEventListener('submit', function(e) {
+        const totalDebit = parseFloat(document.getElementById('totalDebit').textContent);
+        const totalCredit = parseFloat(document.getElementById('totalCredit').textContent);
+        
+        if (totalDebit === 0 && totalCredit === 0) {
+            e.preventDefault();
+            alert('Please enter at least one debit or credit amount.');
+        }
+    });
+});
+</script>
+{% endblock %}

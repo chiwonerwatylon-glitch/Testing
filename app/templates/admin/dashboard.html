@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4"><i class="bi bi-shield-lock me-2"></i>Admin Dashboard</h2>
+    
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-start border-primary border-4 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-1">Total Users</h6>
+                    <h2 class="mb-0">{{ stats.total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-start border-success border-4 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-1">Active Users</h6>
+                    <h2 class="mb-0">{{ stats.active_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-start border-warning border-4 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-1">Pending Approval</h6>
+                    <h2 class="mb-0">{{ stats.pending_users }}</h2>
+                </div>
+                {% if stats.pending_users > 0 %}
+                <a href="{{ url_for('admin.users', status='inactive') }}" class="card-footer text-warning small">
+                    Review Now <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-start border-info border-4 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase mb-1">Total Requisitions</h6>
+                    <h2 class="mb-0">{{ stats.total_requisitions }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Recent Users -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Recent Users</h5>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>
+                                    <strong>{{ user.full_name }}</strong><br>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin.user_edit', id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Activity</h5>
+                    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for log in recent_audits %}
+                            <tr>
+                                <td>
+                                    <strong>{{ log.user.full_name if log.user else 'System' }}</strong><br>
+                                    <small class="text-muted">{{ log.action.replace('_', ' ').title() }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <small class="text-muted">{{ log.created_at.strftime('%m/%d %H:%M') }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

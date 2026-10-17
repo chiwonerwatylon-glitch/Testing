@@ -1,0 +1,193 @@
+from app import db
+from flask_login import UserMixin
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    employee_id = db.Column(db.String(20), unique=True, nullable=False)
+    department = db.Column(db.String(100), nullable=False)
+    position = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    signature_path = db.Column(db.String(255))
+    
+    # Role and permissions
+    role = db.Column(db.String(20), default='user')  # user, reviewer, approver, superuser
+    is_active = db.Column(db.Boolean, default=False)
+    can_initiate = db.Column(db.Boolean, default=False)
+    can_review = db.Column(db.Boolean, default=False)
+    can_approve = db.Column(db.Boolean, default=False)
+    is_senior_approver = db.Column(db.Boolean, default=False)  # 3rd approver
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    initiated_requisitions = db.relationship('Requisition', backref='initiator', 
+                                            foreign_keys='Requisition.initiator_id', lazy='dynamic')
+    reviewed_requisitions = db.relationship('Requisition', backref='reviewer', 
+                                           foreign_keys='Requisition.reviewer_id', lazy='dynamic')
+    approval_logs = db.relationship('ApprovalLog', backref='approver', lazy='dynamic')
+    
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def __repr__(self):
+        return f'<User {self.email}>'
+
+
+class Requisition(db.Model):
+    __tablename__ = 'requisitions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    requisition_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Payment details
+    in_favor_of = db.Column(db.String(200), nullable=False)
+    bank_name = db.Column(db.String(100), nullable=False)
+    branch = db.Column(db.String(100), nullable=False)
+    account_number = db.Column(db.String(50), nullable=False)
+    
+    # Payment reason
+    reason_for_payment = db.Column(db.Text, nullable=False)
+    itf_263 = db.Column(db.String(10), default='NA')  # Yes, No, NA
+    
+    # Amount info
+    currency = db.Column(db.String(10), default='USD')
+    total_debit = db.Column(db.Float, default=0.0)
+    total_credit = db.Column(db.Float, default=0.0)
+    
+    # Status tracking
+    status = db.Column(db.String(30), default='draft')
+    # draft, pending_review, pending_approval, partially_approved, approved, rejected
+    
+    # Workflow tracking
+    initiator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    initiated_at = db.Column(db.DateTime)
+    initiator_signature = db.Column(db.String(255))
+    
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    reviewed_at = db.Column(db.DateTime)
+    reviewer_signature = db.Column(db.String(255))
+    review_comments = db.Column(db.Text)
+    
+    required_approvals = db.Column(db.Integer, default=2)
+    current_approvals = db.Column(db.Integer, default=0)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    items = db.relationship('RequisitionItem', backref='requisition', 
+                           lazy='dynamic', cascade='all, delete-orphan')
+    approval_logs = db.relationship('ApprovalLog', backref='requisition', 
+                                   lazy='dynamic', cascade='all, delete-orphan')
+    
+    def calculate_required_approvals(self):
+        """Calculate required approvals based on amount"""
+        if self.currency == 'USD' and self.total_debit >= 5000:
+            return 3
+        return 2
+    
+    def get_approval_status(self):
+        """Get detailed approval status"""
+        approvals = ApprovalLog.query.filter_by(
+            requisition_id=self.id,
+            action='approved'
+        ).all()
+        
+        return {
+            'required': self.required_approvals,
+            'completed': len(approvals),
+            'approvers': [a.approver.full_name for a in approvals],
+            'pending': self.required_approvals - len(approvals)
+        }
+    
+    @staticmethod
+    def generate_requisition_number():
+        """Generate unique requisition number"""
+        today = datetime.utcnow()
+        prefix = f"FML-REQ-{today.strftime('%Y%m%d')}"
+        
+        last_req = Requisition.query.filter(
+            Requisition.requisition_number.like(f"{prefix}%")
+        ).order_by(Requisition.id.desc()).first()
+        
+        if last_req:
+            last_num = int(last_req.requisition_number.split('-')[-1])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+        
+        return f"{prefix}-{new_num:04d}"
+    
+    def __repr__(self):
+        return f'<Requisition {self.requisition_number}>'
+
+
+class RequisitionItem(db.Model):
+    __tablename__ = 'requisition_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    requisition_id = db.Column(db.Integer, db.ForeignKey('requisitions.id'), nullable=False)
+    
+    account_name = db.Column(db.String(100), nullable=False)
+    account_code = db.Column(db.String(50), nullable=False)
+    account_location = db.Column(db.String(100))
+    account_department = db.Column(db.String(100))
+    details = db.Column(db.Text)
+    debit = db.Column(db.Float, default=0.0)
+    credit = db.Column(db.Float, default=0.0)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<RequisitionItem {self.account_name}>'
+
+
+class ApprovalLog(db.Model):
+    __tablename__ = 'approval_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    requisition_id = db.Column(db.Integer, db.ForeignKey('requisitions.id'), nullable=False)
+    approver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    approval_level = db.Column(db.Integer, nullable=False)  # 1, 2, or 3
+    action = db.Column(db.String(20), nullable=False)  # approved, rejected
+    comments = db.Column(db.Text)
+    signature_path = db.Column(db.String(255))
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ApprovalLog {self.requisition_id} - Level {self.approval_level}>'
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    action = db.Column(db.String(100), nullable=False)
+    entity_type = db.Column(db.String(50))
+    entity_id = db.Column(db.Integer)
+    details = db.Column(db.Text)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='audit_logs')
