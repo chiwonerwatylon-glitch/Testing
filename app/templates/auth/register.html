@@ -6,40 +6,76 @@
 <div class="auth-container">
     <div class="auth-card auth-card-wide">
         <div class="auth-header">
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FML Logo" class="auth-logo" onerror="this.style.display='none'">
+            <img
+                src="{{ url_for('static', filename='images/logo.png') }}"
+                alt="FML Logo"
+                class="auth-logo"
+                onerror="this.style.display='none'"
+            >
             <h1 class="auth-title">Create Account</h1>
             <p class="auth-subtitle">Join the FML Requisition System</p>
         </div>
-        
-        <form method="POST" enctype="multipart/form-data" class="auth-form">
+
+        <form method="post" enctype="multipart/form-data" class="auth-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="first_name" class="form-label">First Name *</label>
-                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="first_name"
+                        name="first_name"
+                        required
+                    >
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="last_name" class="form-label">Last Name *</label>
-                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="last_name"
+                        name="last_name"
+                        required
+                    >
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="email" class="form-label">Email Address *</label>
-                    <input type="email" class="form-control" id="email" name="email" required placeholder="your.email@firstmutual.co.zw">
+                    <input
+                        type="email"
+                        class="form-control"
+                        id="email"
+                        name="email"
+                        required
+                        placeholder="your.email@firstmutual.co.zw"
+                        autocomplete="email"
+                    >
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="employee_id" class="form-label">Employee ID *</label>
-                    <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="employee_id"
+                        name="employee_id"
+                        required
+                    >
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="department" class="form-label">Department *</label>
-                    <select class="form-select" id="department" name="department" required>
+                    <select
+                        class="form-select"
+                        id="department"
+                        name="department"
+                        required
+                    >
                         <option value="">Select Department</option>
                         <option value="Finance">Finance</option>
                         <option value="Human Resources">Human Resources</option>
@@ -56,41 +92,81 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="position" class="form-label">Position</label>
-                    <input type="text" class="form-control" id="position" name="position">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="position"
+                        name="position"
+                    >
                 </div>
             </div>
-            
+
             <div class="mb-3">
                 <label for="phone" class="form-label">Phone Number</label>
-                <input type="tel" class="form-control" id="phone" name="phone">
+                <input
+                    type="tel"
+                    class="form-control"
+                    id="phone"
+                    name="phone"
+                    autocomplete="tel"
+                >
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="password" class="form-label">Password *</label>
-                    <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        required
+                        minlength="8"
+                        autocomplete="new-password"
+                    >
                     <div class="form-text">Minimum 8 characters</div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label for="confirm_password" class="form-label">Confirm Password *</label>
-                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="confirm_password"
+                        name="confirm_password"
+                        required
+                        autocomplete="new-password"
+                    >
                 </div>
             </div>
-            
+
             <div class="mb-4">
-                <label for="signature" class="form-label">Upload Signature (Optional - can be added later)</label>
-                <input type="file" class="form-control" id="signature" name="signature" accept="image/*">
-                <div class="form-text">Upload your signature image (PNG, JPG, GIF). Max 5MB.</div>
+                <label for="signature" class="form-label">
+                    Upload Signature (Optional - can be added later)
+                </label>
+                <input
+                    type="file"
+                    class="form-control"
+                    id="signature"
+                    name="signature"
+                    accept="image/*"
+                >
+                <div class="form-text">
+                    Upload your signature image (PNG, JPG, GIF). Max 5MB.
+                </div>
                 <div id="signature-preview" class="mt-2"></div>
             </div>
-            
+
             <button type="submit" class="btn btn-fml-primary w-100 py-2">
-                <i class="bi bi-person-plus me-2"></i>Register
+                <i class="bi bi-person-plus me-2"></i>
+                Register
             </button>
         </form>
-        
+
         <div class="auth-footer">
-            <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in here</a></p>
+            <p>
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}">Sign in here</a>
+            </p>
         </div>
     </div>
 </div>
@@ -98,28 +174,41 @@
 
 {% block extra_js %}
 <script>
-    document.getElementById('signature').addEventListener('change', function(e) {
-        const preview = document.getElementById('signature-preview');
-        const file = e.target.files[0];
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.innerHTML = `<img src="${e.target.result}" class="signature-preview-img" alt="Signature Preview">`;
+(function () {
+    'use strict';
+
+    var signatureInput = document.getElementById('signature');
+    var preview = document.getElementById('signature-preview');
+    var confirmPasswordInput = document.getElementById('confirm_password');
+    var passwordInput = document.getElementById('password');
+
+    if (signatureInput && preview) {
+        signatureInput.addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) {
+                preview.innerHTML = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                preview.innerHTML =
+                    '<img src="' + ev.target.result +
+                    '" class="signature-preview-img" alt="Signature Preview">';
             };
             reader.readAsDataURL(file);
-        } else {
-            preview.innerHTML = '';
-        }
-    });
-    
-    document.getElementById('confirm_password').addEventListener('input', function() {
-        const password = document.getElementById('password').value;
-        if (this.value !== password) {
-            this.setCustomValidity('Passwords do not match');
-        } else {
-            this.setCustomValidity('');
-        }
-    });
+        });
+    }
+
+    if (confirmPasswordInput && passwordInput) {
+        confirmPasswordInput.addEventListener('input', function () {
+            var pwd = passwordInput.value || '';
+            if (this.value !== pwd) {
+                this.setCustomValidity('Passwords do not match');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+})();
 </script>
 {% endblock %}
