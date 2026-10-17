@@ -1507,19 +1507,78 @@ body.min-vh-100 {
 /* ============ SIGN-IN PAGE (moved from login.html) ============ */
 /* All rules are scoped with body.auth-page so the generic auth rules above
    (.auth-card, .auth-logo, etc.) used by other pages are not altered. */
-body.auth-page .auth-brand {
-    background:
-        radial-gradient(900px 500px at 10% -10%, rgba(210, 31, 60, .35), transparent 60%),
-        radial-gradient(700px 400px at 110% 110%, rgba(210, 31, 60, .25), transparent 60%),
-        linear-gradient(160deg, #0b0d10 0%, #111417 60%, #1a0d10 100%);
+/* Page background: layered gradient (light mode default) */
+:root body.auth-page {
+    min-height: 100vh;
+    color: var(--bs-body-color);
+    background-color: #ffffff;
+    background-image:
+        radial-gradient(900px 600px at 0% 0%, rgba(210, 31, 60, .18), transparent 60%),
+        radial-gradient(900px 600px at 100% 100%, rgba(26, 26, 26, .14), transparent 60%),
+        linear-gradient(160deg, #ffffff 0%, #f1f1f3 100%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
-body.auth-page .auth-logo {
-    height: 52px;
+html[data-bs-theme="dark"] body.auth-page {
+    background-color: #0b0d10;
+    background-image:
+        radial-gradient(900px 600px at 0% 0%, rgba(210, 31, 60, .28), transparent 60%),
+        radial-gradient(900px 600px at 100% 100%, rgba(255, 255, 255, .05), transparent 60%),
+        linear-gradient(160deg, #0b0d10 0%, #17191d 100%);
+}
+
+/* Smooth light/dark switching (fade excluded so Bootstrap alerts keep their own fade) */
+body.auth-page,
+body.auth-page *:not(.fade) {
+    transition:
+        background-color .45s ease,
+        color .45s ease,
+        border-color .45s ease,
+        box-shadow .45s ease;
+}
+
+body.auth-page .auth-brand {
+    background:
+        radial-gradient(600px 400px at 100% 0%, rgba(255, 255, 255, .08), transparent 60%),
+        linear-gradient(160deg, #0b0b0c 0%, #1a1a1a 45%, #7a1225 80%, #D21F3C 100%);
+}
+
+html[data-bs-theme="dark"] body.auth-page .auth-brand {
+    background:
+        radial-gradient(600px 400px at 100% 0%, rgba(255, 255, 255, .06), transparent 60%),
+        linear-gradient(160deg, #050506 0%, #121212 45%, #5e0e1d 80%, #B01A33 100%);
+}
+
+body.auth-page .auth-logo,
+body.auth-page .login-header-logo {
+    height: 88px;
     width: auto;
+    max-width: 100%;
+    padding: 10px;
+    border-radius: 16px;
     background: #fff;
-    border-radius: 10px;
-    padding: 6px;
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .6);
+}
+
+@media (min-width: 992px) {
+    body.auth-page .auth-logo,
+    body.auth-page .login-header-logo {
+        height: 104px;
+    }
+}
+
+/* Card: brand-red top border, deeper surface in dark mode */
+body.auth-page .auth-card,
+body.auth-page .login-card {
+    border-top: 4px solid #D21F3C !important;
+}
+
+html[data-bs-theme="dark"] body.auth-page .auth-card,
+html[data-bs-theme="dark"] body.auth-page .login-card {
+    --bs-card-bg: #1a1d21;
+    background-color: #1a1d21;
+    box-shadow: 0 25px 60px -20px rgba(210, 31, 60, .35) !important;
 }
 
 body.auth-page .feature-icon {
@@ -1544,6 +1603,10 @@ body.auth-page .btn-signin:hover,
 body.auth-page .btn-signin:focus {
     filter: brightness(1.06);
     color: #fff;
+}
+
+body.auth-page .form-control {
+    background-color: var(--bs-body-bg);
 }
 
 body.auth-page .form-control:focus {
@@ -1578,4 +1641,29 @@ body.auth-page .theme-toggle {
     z-index: 10;
     width: 38px;
     height: 38px;
+    transition:
+        background-color .45s ease,
+        color .45s ease,
+        border-color .45s ease,
+        box-shadow .45s ease,
+        transform .45s ease;
+}
+
+body.auth-page .theme-toggle:hover,
+body.auth-page .theme-toggle:focus-visible {
+    border-color: #D21F3C;
+    box-shadow: 0 0 0 .25rem rgba(210, 31, 60, .25);
+    transform: rotate(15deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.auth-page,
+    body.auth-page *:not(.fade),
+    body.auth-page .theme-toggle {
+        transition: none;
+    }
+    body.auth-page .theme-toggle:hover,
+    body.auth-page .theme-toggle:focus-visible {
+        transform: none;
+    }
 }
