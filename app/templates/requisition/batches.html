@@ -48,7 +48,7 @@
                             <tr>
                                 <th scope="col"><span class="visually-hidden">Select</span></th>
                                 <th scope="col">Reference <span class="fw-normal small text-body-secondary">(editable)</span></th>
-                                <th scope="col">Account name</th>
+                                <th scope="col">Account name <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col">Account number</th>
                                 <th scope="col">Code</th>
                                 <th scope="col" class="text-end">Amount</th>
@@ -58,7 +58,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for r, code, ref in pending %}
+                            {% for r, code, ref, name in pending %}
                             <tr>
                                 <td>
                                     <input class="form-check-input batch-check" type="checkbox" name="ids" value="{{ r.id }}"
@@ -69,7 +69,10 @@
                                            value="{{ ref }}" maxlength="255" aria-label="Reference for {{ r.requisition_number }}">
                                     <div class="small text-body-secondary mt-1">{{ r.requisition_number }}</div>
                                 </td>
-                                <td>{{ r.in_favor_of }}</td>
+                                <td style="min-width: 200px;">
+                                    <input type="text" class="form-control form-control-sm" name="name_{{ r.id }}"
+                                           value="{{ name }}" maxlength="200" aria-label="Account name for {{ r.requisition_number }}">
+                                </td>
                                 <td class="font-monospace">{{ r.account_number }}</td>
                                 <td class="font-monospace">{{ code }}</td>
                                 <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
@@ -132,10 +135,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r, code, ref in rows %}
+                        {% for r, code, ref, name in rows %}
                         <tr>
                             <td class="fw-semibold">{{ ref }}</td>
-                            <td>{{ r.in_favor_of }}</td>
+                            <td>{{ name }}</td>
                             <td class="font-monospace">{{ r.account_number }}</td>
                             <td class="font-monospace">{{ code }}</td>
                             <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
