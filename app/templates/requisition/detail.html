@@ -54,7 +54,7 @@
     <!-- Requisition Document (using shared component) -->
     <div class="card shadow-sm requisition-document">
         <div class="card-body p-4 p-md-5">
-            {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
+            {{ render_requisition_document(requisition, approval_logs, pending_approvals, qr=qr, signature_code=signature_code) }}
         </div>
     </div>
 

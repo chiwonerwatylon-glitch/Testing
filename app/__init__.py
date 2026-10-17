@@ -15,6 +15,8 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fml-requisition-secret-key-2024')
+    if not os.environ.get('SECRET_KEY') and not os.environ.get('REQUISITION_SIGNING_KEY'):
+        app.logger.warning('SECRET_KEY is not set; requisition security codes use a default key.')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///fml_requisition.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size

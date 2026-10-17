@@ -13,7 +13,7 @@
 <body>
     <div class="container py-4">
         <div class="no-print mb-3"><button class="btn btn-dark" onclick="window.print()">Print</button></div>
-        {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
+        {{ render_requisition_document(requisition, approval_logs, pending_approvals, qr=qr, signature_code=signature_code) }}
     </div>
 </body>
 </html>

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Requisition{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+    <h3 class="mb-3">Requisition Verification</h3>
+
+    {% if valid %}
+    <div class="alert alert-success"><i class="bi bi-shield-check me-2"></i><strong>VALID.</strong> This document matches the First Mutual Life requisition record.</div>
+    {% else %}
+    <div class="alert alert-danger"><i class="bi bi-shield-x me-2"></i><strong>INVALID.</strong> This document does not match our records. Do not accept it.</div>
+    {% endif %}
+
+    <table class="table table-bordered">
+        <tbody>
+            <tr>
+                <th scope="row">Requisition number</th>
+                <td>{{ requisition.requisition_number }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Currency</th>
+                <td>{{ requisition.currency }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Authorised amount</th>
+                <td>{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Status</th>
+                <td>{{ requisition.status|replace('_',' ')|title }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Required approvals</th>
+                <td>{{ requisition.required_approvals }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Approvers</th>
+                <td>
+                    {% if approvals %}
+                    <ul class="list-unstyled mb-0">
+                        {% for a in approvals %}
+                        <li>Level {{ a.level }}: {{ a.name }} &mdash; {{ a.at.strftime('%d %b %Y %H:%M') }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <span class="text-muted">None yet</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="small text-muted">Verified against the system at the time of viewing.</p>
+</div>
+{% endblock %}

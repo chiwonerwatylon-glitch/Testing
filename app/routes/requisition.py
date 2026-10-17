@@ -98,6 +98,8 @@ def create():
         requisition.required_approvals = requisition.calculate_required_approvals()
         
         db.session.add(requisition)
+        from app.utils.security import file_sha256
+        requisition.initiator_signature_hash = file_sha256(current_user.signature_path)
         
         # Audit log
         audit = AuditLog(
@@ -171,10 +173,16 @@ def detail(id):
         if level not in approved_levels:
             pending_approvals.append(level)
     
+    from app.utils.security import requisition_signature, verification_url, qr_data_uri
+    signature_code = requisition_signature(requisition)
+    qr = qr_data_uri(verification_url(requisition))
+    
     return render_template('requisition/detail.html', 
                           requisition=requisition, 
                           approval_logs=approval_logs,
-                          pending_approvals=pending_approvals)
+                          pending_approvals=pending_approvals,
+                          qr=qr,
+                          signature_code=signature_code)
 
 @requisition_bp.route('/print/<int:id>')
 @login_required
@@ -184,10 +192,28 @@ def print_view(id):
     approval_logs = ApprovalLog.query.filter_by(requisition_id=id).order_by(ApprovalLog.approval_level).all()
     approved_levels = [log.approval_level for log in approval_logs if log.action == 'approved']
     pending_approvals = [lvl for lvl in range(1, requisition.required_approvals + 1) if lvl not in approved_levels]
+    from app.utils.security import requisition_signature, verification_url, qr_data_uri
+    signature_code = requisition_signature(requisition)
+    qr = qr_data_uri(verification_url(requisition))
     return render_template('requisition/print.html',
                            requisition=requisition,
                            approval_logs=approval_logs,
-                           pending_approvals=pending_approvals)
+                           pending_approvals=pending_approvals,
+                           qr=qr,
+                           signature_code=signature_code)
+
+@requisition_bp.route('/verify/<int:id>')
+def verify(id):
+    from app.utils.security import requisition_signature
+    import hmac
+    requisition = Requisition.query.get_or_404(id)
+    supplied = request.args.get('s', '')
+    valid = hmac.compare_digest(supplied, requisition_signature(requisition))
+    approvals = [
+        {'level': log.approval_level, 'name': log.approver.full_name, 'at': log.created_at}
+        for log in requisition.approval_logs.filter_by(action='approved').order_by(ApprovalLog.approval_level)
+    ]
+    return render_template('requisition/verify.html', requisition=requisition, valid=valid, approvals=approvals)
 
 @requisition_bp.route('/review/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -212,6 +238,8 @@ def review(id):
             requisition.reviewer_id = current_user.id
             requisition.reviewed_at = datetime.utcnow()
             requisition.reviewer_signature = current_user.signature_path
+            from app.utils.security import file_sha256
+            requisition.reviewer_signature_hash = file_sha256(current_user.signature_path)
             requisition.review_comments = comments
             requisition.status = 'pending_approval'
             
@@ -282,15 +310,18 @@ def approve(id):
         action = request.form.get('action')
         comments = request.form.get('comments', '')
         
+        from app.utils.security import file_sha256
         approval_log = ApprovalLog(
             requisition_id=id,
             approver_id=current_user.id,
             approval_level=next_level,
             action=action,
             comments=comments,
-            signature_path=current_user.signature_path
+            signature_path=current_user.signature_path,
+            signature_hash=file_sha256(current_user.signature_path)
         )
         db.session.add(approval_log)
+
         
         if action == 'approved':
             requisition.current_approvals = next_level

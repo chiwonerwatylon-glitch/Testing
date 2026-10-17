@@ -82,8 +82,11 @@ class Requisition(db.Model):
     reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     reviewed_at = db.Column(db.DateTime)
     reviewer_signature = db.Column(db.String(255))
+    initiator_signature_hash = db.Column(db.String(64))
+    reviewer_signature_hash = db.Column(db.String(64))
     review_comments = db.Column(db.Text)
     
+
     required_approvals = db.Column(db.Integer, default=2)
     current_approvals = db.Column(db.Integer, default=0)
     
@@ -170,7 +173,9 @@ class ApprovalLog(db.Model):
     action = db.Column(db.String(20), nullable=False)  # approved, rejected
     comments = db.Column(db.Text)
     signature_path = db.Column(db.String(255))
+    signature_hash = db.Column(db.String(64))
     
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
