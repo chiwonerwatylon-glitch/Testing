@@ -46,6 +46,7 @@ def create_app():
     # Ensure database tables exist (gunicorn does not run run.py's __main__ block)
     with app.app_context():
         db.create_all()
+        seed_superuser(app)
     
     return app
 
@@ -53,3 +54,70 @@ def create_app():
 def load_user(user_id):
     from app.models import User
     return User.query.get(int(user_id))
+
+def seed_superuser(app):
+    """Create a superuser from environment variables if it does not exist yet.
+
+    Reads ADMIN_EMAIL and ADMIN_PASSWORD. Optional: ADMIN_FIRST_NAME (default 'Admin'),
+    ADMIN_LAST_NAME (default 'User'), ADMIN_EMPLOYEE_ID (default 'ADMIN001'),
+    ADMIN_DEPARTMENT (default 'IT'). Never hardcode credentials in this file.
+    """
+    email = os.environ.get('ADMIN_EMAIL')
+    password = os.environ.get('ADMIN_PASSWORD')
+    if not email or not password:
+        return
+
+    from app.models import User
+    from werkzeug.security import generate_password_hash
+
+    first_name = os.environ.get('ADMIN_FIRST_NAME') or 'Admin'
+    last_name = os.environ.get('ADMIN_LAST_NAME') or 'User'
+    employee_id = os.environ.get('ADMIN_EMPLOYEE_ID') or 'ADMIN001'
+    department = os.environ.get('ADMIN_DEPARTMENT') or 'IT'
+
+    with app.app_context():
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # Never overwrite an existing password; only ensure admin privileges.
+            changed = False
+            for attr, value in (
+                ('role', 'superuser'),
+                ('is_active', True),
+                ('can_initiate', True),
+                ('can_review', True),
+                ('can_approve', True),
+                ('is_senior_approver', True),
+            ):
+                if getattr(user, attr) != value:
+                    setattr(user, attr, value)
+                    changed = True
+            if changed:
+                db.session.commit()
+                app.logger.info('Updated existing user to superuser privileges: %s', email)
+            return
+
+        if User.query.filter_by(employee_id=employee_id).first():
+            app.logger.warning(
+                'Skipping superuser creation: employee_id %s is already used by another user.',
+                employee_id,
+            )
+            return
+
+        superuser = User(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            employee_id=employee_id,
+            department=department,
+            password_hash=generate_password_hash(password),
+            role='superuser',
+            is_active=True,
+            can_initiate=True,
+            can_review=True,
+            can_approve=True,
+            is_senior_approver=True,
+        )
+        db.session.add(superuser)
+        db.session.commit()
+        app.logger.info('Created superuser: %s', email)
