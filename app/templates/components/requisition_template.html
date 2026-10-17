@@ -7,7 +7,7 @@
    {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
    ========================================================= #}
 
-{% macro render_requisition_document(requisition, approval_logs=[], pending_approvals=[], show_progress=True) %}
+{% macro render_requisition_document(requisition, approval_logs=[], pending_approvals=[], show_progress=True, qr=None, signature_code=None) %}
 
 {% set status_classes = {
     'draft': 'bg-secondary',
@@ -257,6 +257,36 @@
         (<strong>{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}</strong>)
         is at or above the <strong>$5,000 USD</strong> threshold.
         The 3rd approver must be a designated <strong>Senior Approver</strong>.
+    </div>
+    {% endif %}
+
+    <!-- ============ DOCUMENT SECURITY ============ -->
+    {% if qr or signature_code %}
+    <div class="req-security border border-2 border-dark rounded-0 p-3 mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold text-uppercase small"><i class="bi bi-shield-lock me-1"></i>Document security</span>
+            <span class="small text-muted">Tamper-evident record</span>
+        </div>
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                {% if qr %}
+                <img src="{{ qr }}" alt="Verification QR code" width="110" height="110">
+                {% endif %}
+            </div>
+            <div class="col">
+                <div class="small"><strong>Authorised amount:</strong> {{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit or 0) }}</div>
+                {% if signature_code %}
+                <div class="small"><strong>Document code:</strong> <span class="font-monospace">{{ signature_code }}</span></div>
+                {% endif %}
+                {% if requisition.initiator_signature_hash %}
+                <div class="small"><strong>Initiator signature hash:</strong> <span class="font-monospace">{{ requisition.initiator_signature_hash[:16] }}</span></div>
+                {% endif %}
+                {% if requisition.reviewer_signature_hash %}
+                <div class="small"><strong>Reviewer signature hash:</strong> <span class="font-monospace">{{ requisition.reviewer_signature_hash[:16] }}</span></div>
+                {% endif %}
+                <div class="small text-muted mt-1">Any change to amounts, status or approvals invalidates this document code.</div>
+            </div>
+        </div>
     </div>
     {% endif %}
 

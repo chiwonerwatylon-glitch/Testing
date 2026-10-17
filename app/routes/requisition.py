@@ -186,6 +186,34 @@ def detail(id):
                           pending_approvals=pending_approvals,
                           workflow=workflow)
 
+def _document_code(requisition, approval_logs):
+    """Tamper-evident document code derived from amounts, status and approvals."""
+    import hashlib
+    fingerprint = '|'.join([
+        str(requisition.requisition_number),
+        str(requisition.total_debit),
+        str(requisition.total_credit),
+        str(requisition.currency),
+        str(requisition.status),
+        str(requisition.current_approvals),
+        ','.join(str(log.approver_id) + ':' + str(log.approval_level) + ':' + str(log.action) for log in approval_logs),
+    ])
+    digest = hashlib.sha256(fingerprint.encode('utf-8')).hexdigest().upper()
+    return '-'.join(digest[i:i + 4] for i in range(0, 16, 4))
+
+@requisition_bp.route('/verify/<int:id>')
+@login_required
+@active_user_required
+def verify(id):
+    from flask import jsonify
+    requisition = Requisition.query.get_or_404(id)
+    approval_logs = ApprovalLog.query.filter_by(requisition_id=id).order_by(ApprovalLog.approval_level).all()
+    return jsonify({
+        'requisition_number': requisition.requisition_number,
+        'status': requisition.status,
+        'document_code': _document_code(requisition, approval_logs),
+    })
+
 @requisition_bp.route('/print/<int:id>')
 @login_required
 @active_user_required
@@ -194,17 +222,31 @@ def print_view(id):
     approval_logs = ApprovalLog.query.filter_by(requisition_id=id).order_by(ApprovalLog.approval_level).all()
     approved_levels = [log.approval_level for log in approval_logs if log.action == 'approved']
     pending_approvals = [lvl for lvl in range(1, requisition.required_approvals + 1) if lvl not in approved_levels]
+    signature_code = _document_code(requisition, approval_logs)
+
+    # Verification link and optional QR image
+    verify_url = url_for('requisition.verify', id=requisition.id, _external=True)
+    qr = None
     try:
-        from app.utils.workflow import build_workflow
-        workflow = build_workflow(requisition, approval_logs)
-    except ImportError:
-        # app.utils.workflow is not present in this codebase; the template skips the section
-        workflow = None
+        import base64
+        import io
+        import qrcode
+        img = qrcode.make(verify_url or signature_code)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+    except Exception:
+        qr = None
+
     return render_template('requisition/print.html',
                            requisition=requisition,
                            approval_logs=approval_logs,
                            pending_approvals=pending_approvals,
-                           workflow=workflow)
+                           qr=qr,
+                           signature_code=signature_code,
+                           verify_url=verify_url,
+                           printed_at=datetime.utcnow(),
+                           printed_by=current_user.full_name)
 
 @requisition_bp.route('/review/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -419,8 +461,11 @@ def review_queue():
         (key, label, Requisition.query.filter(Requisition.status.in_(tab_statuses[key])).count())
         for key, label in [('pending', 'Pending Review'), ('awaiting_approval', 'Awaiting Approval'), ('completed', 'Completed')]
     ]
-    return render_template('requisition/list.html', requisitions=requisitions,
-                           title='Review Queue', status_filter=tab, tabs=tabs, queue_tab=tab)
+    counts = {key: count for key, _label, count in tabs}
+    total_value = sum(r.total_debit or 0 for r in requisitions.items)
+    return render_template('requisition/review_queue.html', requisitions=requisitions,
+                           title='Review Queue', status_filter=tab, tabs=tabs, queue_tab=tab,
+                           counts=counts, total_value=total_value)
 
 
 @requisition_bp.route('/pending-approval')
