@@ -667,14 +667,14 @@ def _next_batch_number():
     return f"{prefix}-{count + 1:03d}"
 
 
-def _batch_response(batch, requisitions, fmt):
+def _batch_response(batch, rows, fmt):
+    """rows: list of (requisition, reference)."""
     from app.utils.batch import to_batch_csv, to_batch_excel
     if fmt == 'csv':
-        buf = to_batch_csv(requisitions)
+        buf = to_batch_csv(rows)
         mimetype, ext = 'text/csv', 'csv'
     else:
-        stamp = datetime.utcnow().strftime('%d %b %Y %H:%M UTC')
-        buf = to_batch_excel(requisitions, batch.batch_number, batch.currency, stamp)
+        buf = to_batch_excel(rows)
         mimetype, ext = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx'
     return send_file(buf, mimetype=mimetype, as_attachment=True,
                      download_name=f"{batch.batch_number}.{ext}")
@@ -685,16 +685,17 @@ def _batch_response(batch, requisitions, fmt):
 @active_user_required
 def batches():
     from app.models import RequisitionBatch, BatchItem
-    from app.utils.batch import payment_code
+    from app.utils.batch import payment_code, default_reference
     if not _can_batch():
         flash('You do not have access to batching.', 'warning')
         return redirect(url_for('requisition.dashboard'))
 
-    pending = [(r, payment_code(r)) for r in
+    pending = [(r, payment_code(r), default_reference(r)) for r in
                _pending_batch_query().order_by(Requisition.currency, Requisition.created_at).all()]
     history = []
     for batch in RequisitionBatch.query.order_by(RequisitionBatch.created_at.desc()).all():
-        rows = [(bi.requisition, payment_code(bi.requisition)) for bi in batch.items]
+        rows = [(bi.requisition, payment_code(bi.requisition), bi.reference or bi.requisition.requisition_number)
+                for bi in batch.items]
         history.append((batch, rows))
     return render_template('requisition/batches.html', pending=pending, history=history,
                            batched_count=BatchItem.query.count())
@@ -705,7 +706,9 @@ def batches():
 @active_user_required
 def batch_create():
     from sqlalchemy.exc import IntegrityError
+    from decimal import Decimal
     from app.models import RequisitionBatch, BatchItem
+    from app.utils.batch import money, clean_reference, default_reference
     if not _can_batch():
         flash('You do not have access to batching.', 'warning')
         return redirect(url_for('requisition.dashboard'))
@@ -725,8 +728,12 @@ def batch_create():
         flash('A batch can only contain one currency.', 'warning')
         return redirect(url_for('requisition.batches'))
 
-    from decimal import Decimal
-    from app.utils.batch import money
+    # Reference is editable at batching; blank falls back to the reason for payment
+    references = {
+        r.id: clean_reference(request.form.get(f'ref_{r.id}'), default_reference(r))
+        for r in requisitions
+    }
+
     total = sum((money(r.total_debit) for r in requisitions), Decimal('0.00'))
     batch = RequisitionBatch(batch_number=_next_batch_number(), currency=requisitions[0].currency,
                              row_count=len(requisitions), total_amount=float(total),
@@ -734,7 +741,7 @@ def batch_create():
     db.session.add(batch)
     db.session.flush()
     for r in requisitions:
-        db.session.add(BatchItem(batch_id=batch.id, requisition_id=r.id))
+        db.session.add(BatchItem(batch_id=batch.id, requisition_id=r.id, reference=references[r.id]))
     db.session.add(AuditLog(
         user_id=current_user.id, action='create_batch', entity_type='batch', entity_id=batch.id,
         details=f'Batch {batch.batch_number}: {len(requisitions)} payment(s), {batch.currency} {total}',
@@ -747,7 +754,7 @@ def batch_create():
         return redirect(url_for('requisition.batches'))
 
     flash(f'{batch.batch_number} created with {len(requisitions)} payment(s).', 'success')
-    return _batch_response(batch, requisitions, fmt)
+    return _batch_response(batch, [(r, references[r.id]) for r in requisitions], fmt)
 
 
 @requisition_bp.route('/batches/<int:id>/download/<fmt>')
@@ -759,5 +766,6 @@ def batch_download(id, fmt):
         flash('Batch download is not available.', 'warning')
         return redirect(url_for('requisition.batches'))
     batch = RequisitionBatch.query.get_or_404(id)
-    requisitions = [bi.requisition for bi in BatchItem.query.filter_by(batch_id=id).order_by(BatchItem.id)]
-    return _batch_response(batch, requisitions, fmt)
+    items = BatchItem.query.filter_by(batch_id=id).order_by(BatchItem.id).all()
+    rows = [(bi.requisition, bi.reference or bi.requisition.requisition_number) for bi in items]
+    return _batch_response(batch, rows, fmt)

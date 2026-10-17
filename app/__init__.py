@@ -47,6 +47,7 @@ def create_app():
     # Ensure database tables exist (gunicorn does not run run.py's __main__ block)
     with app.app_context():
         db.create_all()
+        _ensure_batch_reference_column()
         seed_superuser(app)
     
     return app
@@ -128,3 +129,14 @@ def seed_superuser(app):
             app.logger.info('Superuser %s already created by another worker.', email)
             return
         app.logger.info('Created superuser: %s', email)
+
+def _ensure_batch_reference_column():
+    """create_all() does not add columns to existing tables; add batch_items.reference if missing."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    if 'batch_items' not in inspector.get_table_names():
+        return
+    columns = {c['name'] for c in inspector.get_columns('batch_items')}
+    if 'reference' not in columns:
+        with db.engine.begin() as conn:
+            conn.execute(text('ALTER TABLE batch_items ADD COLUMN reference VARCHAR(255)'))
