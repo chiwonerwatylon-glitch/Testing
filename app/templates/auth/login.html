@@ -251,15 +251,6 @@
                                 Request an account
                             </a>
                         </p>
-                        <p class="text-center small mt-2 mb-0">
-                            <button
-                                type="button"
-                                class="btn btn-link btn-sm p-0 text-body-secondary"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#loginHelp"
-                                aria-controls="loginHelp"
-                            ><i class="bi bi-question-circle me-1"></i>Need help?</button>
-                        </p>
                     </div>
                 </div>
 
@@ -271,7 +262,7 @@
 
         <footer class="login-footer text-center text-body-secondary">
             <div class="mb-1">
-                <a href="#" class="text-decoration-none">Need help?</a>
+                <a href="#loginHelp" role="button" class="text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#loginHelp" aria-controls="loginHelp">Need help?</a>
             </div>
             <div>
                 &copy; {{ current_year or 2026 }} First Mutual Life Assurance Company (Zimbabwe)
