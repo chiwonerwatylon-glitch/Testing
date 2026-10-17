@@ -1,13 +1,20 @@
 {# =========================================================
    FIRST MUTUAL LIFE ASSURANCE COMPANY
    Reusable Requisition Document Component (Macro)
-   
+
    Usage:
    {% from 'components/requisition_template.html' import render_requisition_document %}
    {{ render_requisition_document(requisition, approval_logs, pending_approvals) }}
    ========================================================= #}
 
-{% macro render_requisition_document(requisition, approval_logs=[], pending_approvals=[], show_progress=True, qr=None, signature_code=None) %}
+{% macro render_requisition_document(
+    requisition,
+    approval_logs = [],
+    pending_approvals = [],
+    show_progress = True,
+    qr = None,
+    signature_code = None
+) %}
 
 {% set status_classes = {
     'draft': 'bg-secondary',
@@ -20,14 +27,16 @@
 
 <div class="requisition-document-wrapper" id="requisition-doc-{{ requisition.id }}">
 
-    <!-- ============ HEADER ============ -->
+    {# ============ HEADER ============ #}
     <div class="req-doc-header text-center mb-4">
         <img src="{{ url_for('static', filename='images/logo.png') }}"
              alt="First Mutual Life Logo"
              class="req-doc-logo mb-2"
              onerror="this.style.display='none'">
+
         <h2 class="fml-title mb-1">FIRST MUTUAL LIFE ASSURANCE COMPANY</h2>
         <h4 class="text-muted fw-normal mb-2">PAYMENT REQUISITION</h4>
+
         <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
             <span class="req-doc-number">
                 <strong>Requisition No:</strong> {{ requisition.requisition_number }}
@@ -40,7 +49,7 @@
 
     <hr class="req-doc-divider">
 
-    <!-- ============ PAYMENT DETAILS ============ -->
+    {# ============ PAYMENT DETAILS ============ #}
     <div class="row mb-4">
         <div class="col-md-6">
             <table class="table table-borderless table-sm req-doc-table">
@@ -64,6 +73,7 @@
                 </tbody>
             </table>
         </div>
+
         <div class="col-md-6">
             <table class="table table-borderless table-sm req-doc-table">
                 <tbody>
@@ -79,12 +89,16 @@
                     </tr>
                     <tr>
                         <td class="req-label">Date Created:</td>
-                        <td class="req-value">{{ requisition.created_at.strftime('%d %B %Y, %H:%M') }}</td>
+                        <td class="req-value">
+                            {{ requisition.created_at.strftime('%d %B %Y, %H:%M') }}
+                        </td>
                     </tr>
                     {% if requisition.completed_at %}
                     <tr>
                         <td class="req-label">Date Completed:</td>
-                        <td class="req-value">{{ requisition.completed_at.strftime('%d %B %Y, %H:%M') }}</td>
+                        <td class="req-value">
+                            {{ requisition.completed_at.strftime('%d %B %Y, %H:%M') }}
+                        </td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -97,7 +111,7 @@
         <p class="req-reason-box">{{ requisition.reason_for_payment }}</p>
     </div>
 
-    <!-- ============ ITEMS TABLE ============ -->
+    {# ============ ITEMS TABLE ============ #}
     <div class="table-responsive mb-4">
         <table class="table table-bordered req-items-table">
             <thead class="table-fml-primary">
@@ -119,40 +133,63 @@
                     <td>{{ item.account_location or '-' }}</td>
                     <td>{{ item.account_department or '-' }}</td>
                     <td>{{ item.details or '-' }}</td>
-                    <td class="text-end">{{ '{:,.2f}'.format(item.debit) if item.debit else '-' }}</td>
-                    <td class="text-end">{{ '{:,.2f}'.format(item.credit) if item.credit else '-' }}</td>
+                    <td class="text-end">
+                        {{ '{:,.2f}'.format(item.debit) if item.debit else '-' }}
+                    </td>
+                    <td class="text-end">
+                        {{ '{:,.2f}'.format(item.credit) if item.credit else '-' }}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr class="req-totals-row fw-bold">
                     <td colspan="5" class="text-end">TOTALS:</td>
-                    <td class="text-end">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}</td>
-                    <td class="text-end">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_credit) }}</td>
+                    <td class="text-end">
+                        {{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}
+                    </td>
+                    <td class="text-end">
+                        {{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_credit) }}
+                    </td>
                 </tr>
             </tfoot>
         </table>
     </div>
 
-    <!-- ============ APPROVAL PROGRESS ============ -->
+    {# ============ APPROVAL PROGRESS ============ #}
     {% if show_progress and requisition.status in ['pending_approval', 'partially_approved', 'approved'] %}
-    <div class="mb-4 no-print">
-        <h5 class="req-section-heading"><i class="bi bi-check2-square me-2"></i>Approval Progress</h5>
-        {% set progress_pct = (requisition.current_approvals / requisition.required_approvals * 100)|round|int %}
-        <div class="progress" style="height: 25px;">
-            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_pct }}%">
-                {{ requisition.current_approvals }}/{{ requisition.required_approvals }} Approved
+        {% if requisition.required_approvals %}
+            {% set progress_pct =
+                (requisition.current_approvals / requisition.required_approvals * 100)
+                | round
+                | int
+            %}
+        {% else %}
+            {% set progress_pct = 0 %}
+        {% endif %}
+        <div class="mb-4 no-print">
+            <h5 class="req-section-heading">
+                <i class="bi bi-check2-square me-2"></i>Approval Progress
+            </h5>
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-success"
+                     role="progressbar"
+                     style="width: {{ progress_pct }}%">
+                    {{ requisition.current_approvals }}/{{ requisition.required_approvals }} Approved
+                </div>
             </div>
         </div>
-    </div>
     {% endif %}
 
     <hr class="req-doc-divider">
 
-    <!-- ============ AUTHORIZATION / SIGNATURES ============ -->
-    <h5 class="req-section-heading mb-4"><i class="bi bi-pen me-2"></i>AUTHORIZATION</h5>
+    {# ============ AUTHORIZATION / SIGNATURES ============ #}
+    <h5 class="req-section-heading mb-4">
+        <i class="bi bi-pen me-2"></i>AUTHORIZATION
+    </h5>
 
     {% set approval_ordinals = ['1st', '2nd', '3rd'] %}
+
     <div class="table-responsive">
         <table class="table table-bordered align-middle req-auth-table mb-0">
             <thead>
@@ -168,32 +205,80 @@
                 <tr>
                     <td class="fw-semibold">Initiated By</td>
                     <td>{{ requisition.initiator.full_name }}</td>
-                    <td>{% if requisition.initiator_signature %}<img src="{{ url_for('static', filename='signatures/' + requisition.initiator_signature) }}" class="req-sig-img" alt="Initiator signature">{% else %}<span class="req-sig-placeholder">________________</span>{% endif %}</td>
-                    <td>{{ requisition.initiated_at.strftime('%d %b %Y %H:%M') if requisition.initiated_at else 'Pending' }}</td>
-                    <td class="font-monospace small">{{ requisition.initiator_signature_hash[:16] if requisition.initiator_signature_hash else '-' }}</td>
+                    <td>
+                        {% if requisition.initiator_signature %}
+                            <img src="{{ url_for('static', filename='signatures/' + requisition.initiator_signature) }}"
+                                 class="req-sig-img"
+                                 alt="Initiator signature">
+                        {% else %}
+                            <span class="req-sig-placeholder">________________</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ requisition.initiated_at.strftime('%d %b %Y %H:%M') if requisition.initiated_at else 'Pending' }}
+                    </td>
+                    <td class="font-monospace small">
+                        {{ requisition.initiator_signature_hash[:16] if requisition.initiator_signature_hash else '-' }}
+                    </td>
                 </tr>
+
                 <tr>
                     <td class="fw-semibold">Reviewed By</td>
                     <td>{{ requisition.reviewer.full_name if requisition.reviewer else 'Pending' }}</td>
-                    <td>{% if requisition.reviewer_signature %}<img src="{{ url_for('static', filename='signatures/' + requisition.reviewer_signature) }}" class="req-sig-img" alt="Reviewer signature">{% else %}<span class="req-sig-placeholder">________________</span>{% endif %}</td>
-                    <td>{{ requisition.reviewed_at.strftime('%d %b %Y %H:%M') if requisition.reviewed_at else 'Pending' }}</td>
-                    <td class="font-monospace small">{{ requisition.reviewer_signature_hash[:16] if requisition.reviewer_signature_hash else '-' }}</td>
+                    <td>
+                        {% if requisition.reviewer_signature %}
+                            <img src="{{ url_for('static', filename='signatures/' + requisition.reviewer_signature) }}"
+                                 class="req-sig-img"
+                                 alt="Reviewer signature">
+                        {% else %}
+                            <span class="req-sig-placeholder">________________</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ requisition.reviewed_at.strftime('%d %b %Y %H:%M') if requisition.reviewed_at else 'Pending' }}
+                    </td>
+                    <td class="font-monospace small">
+                        {{ requisition.reviewer_signature_hash[:16] if requisition.reviewer_signature_hash else '-' }}
+                    </td>
                 </tr>
+
                 {% for level in range(1, requisition.required_approvals + 1) %}
-                    {% set log = approval_logs|selectattr('approval_level', 'equalto', level)|selectattr('action', 'equalto', 'approved')|first %}
+                    {% set log = approval_logs
+                        | selectattr('approval_level', 'equalto', level)
+                        | selectattr('action', 'equalto', 'approved')
+                        | first
+                    %}
                     <tr>
-                        <td class="fw-semibold">{% if level == 3 %}Senior Approver (3rd){% else %}{{ approval_ordinals[level-1] }} Approver{% endif %}</td>
+                        <td class="fw-semibold">
+                            {% if level == 3 %}
+                                Senior Approver (3rd)
+                            {% else %}
+                                {{ approval_ordinals[level - 1] }} Approver
+                            {% endif %}
+                        </td>
                         <td>{{ log.approver.full_name if log else 'Pending' }}</td>
-                        <td>{% if log and log.signature_path %}<img src="{{ url_for('static', filename='signatures/' + log.signature_path) }}" class="req-sig-img" alt="Approver signature">{% else %}<span class="req-sig-placeholder">________________</span>{% endif %}</td>
-                        <td>{{ log.created_at.strftime('%d %b %Y %H:%M') if log else 'Pending' }}</td>
-                        <td class="font-monospace small">{{ log.signature_hash[:16] if log and log.signature_hash else '-' }}</td>
+                        <td>
+                            {% if log and log.signature_path %}
+                                <img src="{{ url_for('static', filename='signatures/' + log.signature_path) }}"
+                                     class="req-sig-img"
+                                     alt="Approver signature">
+                            {% else %}
+                                <span class="req-sig-placeholder">________________</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ log.created_at.strftime('%d %b %Y %H:%M') if log else 'Pending' }}
+                        </td>
+                        <td class="font-monospace small">
+                            {{ log.signature_hash[:16] if log and log.signature_hash else '-' }}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-    <!-- 3rd Approver Notice (only shows if NOT required, for transparency) -->
+    {# 3rd Approver Notice #}
     {% if requisition.required_approvals == 3 %}
     <div class="alert alert-primary no-print mt-3">
         <i class="bi bi-info-circle me-2"></i>
@@ -204,37 +289,63 @@
     </div>
     {% endif %}
 
-    <!-- ============ DOCUMENT SECURITY ============ -->
+    {# ============ DOCUMENT SECURITY ============ #}
     {% if qr or signature_code %}
     <div class="req-security border border-2 border-dark rounded-0 p-3 mt-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-bold text-uppercase small"><i class="bi bi-shield-lock me-1"></i>Document security</span>
+            <span class="fw-bold text-uppercase small">
+                <i class="bi bi-shield-lock me-1"></i>Document security
+            </span>
             <span class="small text-muted">Tamper-evident record</span>
         </div>
+
         <div class="row g-3 align-items-center">
+            {% if qr %}
             <div class="col-auto">
-                {% if qr %}
                 <img src="{{ qr }}" alt="Verification QR code" width="110" height="110">
-                {% endif %}
             </div>
+            {% endif %}
+
             <div class="col">
-                <div class="small"><strong>Authorised amount:</strong> {{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit or 0) }}</div>
+                <div class="small">
+                    <strong>Authorised amount:</strong>
+                    {{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit or 0) }}
+                </div>
+
                 {% if signature_code %}
-                <div class="small"><strong>Document code:</strong> <span class="font-monospace">{{ signature_code }}</span></div>
+                <div class="small">
+                    <strong>Document code:</strong>
+                    <span class="font-monospace">{{ signature_code }}</span>
+                </div>
                 {% endif %}
+
                 {% if requisition.initiator_signature_hash %}
-                <div class="small"><strong>Initiator signature hash:</strong> <span class="font-monospace">{{ requisition.initiator_signature_hash[:16] }}</span></div>
+                <div class="small">
+                    <strong>Initiator signature hash:</strong>
+                    <span class="font-monospace">
+                        {{ requisition.initiator_signature_hash[:16] }}
+                    </span>
+                </div>
                 {% endif %}
+
                 {% if requisition.reviewer_signature_hash %}
-                <div class="small"><strong>Reviewer signature hash:</strong> <span class="font-monospace">{{ requisition.reviewer_signature_hash[:16] }}</span></div>
+                <div class="small">
+                    <strong>Reviewer signature hash:</strong>
+                    <span class="font-monospace">
+                        {{ requisition.reviewer_signature_hash[:16] }}
+                    </span>
+                </div>
                 {% endif %}
-                <div class="small text-muted mt-1">Any change to amounts, status or approvals invalidates this document code.</div>
+
+                <div class="small text-muted mt-1">
+                    Any change to amounts, status or approvals invalidates this document code.
+                </div>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- ============ DOCUMENT FOOTER ============ -->
+    {# ============ DOCUMENT FOOTER ============ #}
     <div class="req-doc-footer text-center mt-5 pt-3 no-print">
         <small class="text-muted">
             This is an official requisition document generated by the
@@ -245,3 +356,4 @@
 
 </div>
 {% endmacro %}
+
