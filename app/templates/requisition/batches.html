@@ -50,7 +50,7 @@
                                 <th scope="col">Reference <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col">Account name <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col">Account number</th>
-                                <th scope="col">Code</th>
+                                <th scope="col">Code <span class="fw-normal small text-body-secondary">(editable)</span></th>
                                 <th scope="col" class="text-end">Amount</th>
                                 <th scope="col">Currency</th>
                                 <th scope="col">Branch</th>
@@ -74,7 +74,10 @@
                                            value="{{ name }}" maxlength="200" aria-label="Account name for {{ r.requisition_number }}">
                                 </td>
                                 <td class="font-monospace">{{ r.account_number }}</td>
-                                <td class="font-monospace">{{ code }}</td>
+                                <td style="min-width: 110px;">
+                                    <input type="text" class="form-control form-control-sm font-monospace" name="code_{{ r.id }}"
+                                           value="{{ code }}" maxlength="50" aria-label="Code for {{ r.requisition_number }}">
+                                </td>
                                 <td class="text-end font-monospace">{{ '{:,.2f}'.format(r.total_debit or 0) }}</td>
                                 <td>{{ r.currency }}</td>
                                 <td>{{ r.branch }}</td>

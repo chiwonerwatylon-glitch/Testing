@@ -1,6 +1,6 @@
 """Stanbic Business Online batch files: CSV upload and Excel copy.
 
-Each row is (requisition, reference, account_name). Files contain data rows only, with no headings.
+Each row is (requisition, reference, account_name, code). Files contain data rows only, with no headings.
 Columns: Account Name, Account Number, Code, Amount, Reference, Currency Code, Branch Name.
 """
 import csv
@@ -44,11 +44,11 @@ def account_number_text(requisition):
     return f"{ACCOUNT_NUMBER_PREFIX}{number}" if number else ''
 
 
-def batch_row(requisition, reference, account_name):
+def batch_row(requisition, reference, account_name, code):
     return [
         account_name or requisition.in_favor_of or '',           # Account Name
         account_number_text(requisition),                        # Account Number, text
-        payment_code(requisition),                               # Code
+        code or payment_code(requisition),                       # Code
         money(requisition.total_debit),                          # Amount, 2 dp
         reference or requisition.requisition_number,             # Reference
         requisition.currency or '',                              # Currency Code
@@ -62,8 +62,8 @@ AMOUNT_INDEX = 3
 def to_batch_csv(rows):
     text = io.StringIO()
     writer = csv.writer(text)
-    for requisition, reference, account_name in rows:
-        values = batch_row(requisition, reference, account_name)
+    for requisition, reference, account_name, code in rows:
+        values = batch_row(requisition, reference, account_name, code)
         values[AMOUNT_INDEX] = f"{values[AMOUNT_INDEX]:.2f}"
         writer.writerow(values)
     buf = io.BytesIO(text.getvalue().encode('utf-8'))
@@ -80,8 +80,8 @@ def to_batch_excel(rows):
     ws = wb.active
     ws.title = 'Batch'
 
-    for row_idx, (requisition, reference, account_name) in enumerate(rows, start=1):
-        values = batch_row(requisition, reference, account_name)
+    for row_idx, (requisition, reference, account_name, code) in enumerate(rows, start=1):
+        values = batch_row(requisition, reference, account_name, code)
         for col, value in enumerate(values, start=1):
             cell = ws.cell(row=row_idx, column=col)
             if col - 1 == AMOUNT_INDEX:

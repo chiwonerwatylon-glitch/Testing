@@ -137,7 +137,7 @@ def _ensure_batch_columns():
     if 'batch_items' not in inspector.get_table_names():
         return
     columns = {c['name'] for c in inspector.get_columns('batch_items')}
-    wanted = {'reference': 'VARCHAR(255)', 'account_name': 'VARCHAR(200)'}
+    wanted = {'reference': 'VARCHAR(255)', 'account_name': 'VARCHAR(200)', 'code': 'VARCHAR(50)'}
     with db.engine.begin() as conn:
         for name, ddl in wanted.items():
             if name not in columns:
