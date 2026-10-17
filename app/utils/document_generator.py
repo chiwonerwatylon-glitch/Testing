@@ -288,6 +288,30 @@ class RequisitionDocumentGenerator:
         # Signatures
         self._add_docx_signatures(doc)
         
+        # Document security
+        doc.add_paragraph()
+        security_para = doc.add_paragraph('DOCUMENT SECURITY')
+        security_para.runs[0].bold = True
+        security_para.runs[0].font.color.rgb = RGBColor(0xD2, 0x1F, 0x3C)
+        security_para.runs[0].font.size = Pt(13)
+        
+        security = self._get_security_info()
+        security_rows = [
+            ('Document code', security.get('document_code') or '-'),
+            ('Authorised amount', security.get('authorised_amount') or '-'),
+            ('Verify at', security.get('verify_url') or '-'),
+        ]
+        security_table = doc.add_table(rows=len(security_rows), cols=2)
+        security_table.style = 'Table Grid'
+        for i, (label, value) in enumerate(security_rows):
+            security_table.rows[i].cells[0].text = label
+            security_table.rows[i].cells[1].text = str(value)
+            security_table.rows[i].cells[0].paragraphs[0].runs[0].bold = True
+        
+        note_para = doc.add_paragraph()
+        note_run = note_para.add_run('Any change to amounts, status or approvals invalidates this document code.')
+        note_run.italic = True
+        
         buffer = io.BytesIO()
         doc.save(buffer)
         buffer.seek(0)
@@ -515,20 +539,21 @@ class RequisitionDocumentGenerator:
         return data
     
     def _add_docx_signatures(self, doc):
-        """Add signatures section to DOCX"""
-        from app.models import ApprovalLog
+        """Add signatures section to DOCX: names, signature images, dates and hashes"""
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
         
-        sig_table = doc.add_table(rows=2 + self.requisition.required_approvals + (1 if self.requisition.reviewer else 0), cols=3)
+        req = self.requisition
+        required = req.required_approvals or 0
+        
+        sig_table = doc.add_table(rows=3 + required, cols=4)
         sig_table.style = 'Table Grid'
         
         # Header
-        sig_table.rows[0].cells[0].text = 'Role'
-        sig_table.rows[0].cells[1].text = 'Name & Signature'
-        sig_table.rows[0].cells[2].text = 'Date Signed'
-        
-        from docx.oxml.ns import qn
-        from docx.oxml import OxmlElement
-        for cell in sig_table.rows[0].cells:
+        headers = ['Role', 'Name & Signature', 'Date Signed', 'Signature Hash']
+        for i, header in enumerate(headers):
+            cell = sig_table.rows[0].cells[i]
+            cell.text = header
             for paragraph in cell.paragraphs:
                 for run in paragraph.runs:
                     run.bold = True
@@ -537,34 +562,70 @@ class RequisitionDocumentGenerator:
             shd.set(qn('w:fill'), '1A1A1A')
             cell._element.get_or_add_tcPr().append(shd)
         
-        # Initiator
-        sig_table.rows[1].cells[0].text = 'Initiated By:'
-        sig_table.rows[1].cells[1].text = self.requisition.initiator.full_name
-        sig_table.rows[1].cells[2].text = self.requisition.initiated_at.strftime('%Y-%m-%d %H:%M') if self.requisition.initiated_at else ''
+        def add_signature_image(cell, filename):
+            if not filename:
+                return
+            try:
+                path = os.path.join(current_app.root_path, 'static', 'signatures', os.path.basename(str(filename)))
+                if os.path.exists(path):
+                    run = cell.paragraphs[0].add_run()
+                    run.add_break()
+                    run.add_picture(path, width=Inches(1.4))
+            except Exception as e:
+                current_app.logger.warning('Could not add signature image %s to DOCX: %s', filename, e)
         
-        row_idx = 2
+        def fill_row(row_idx, role, name, signature_file, date_text, hash_text):
+            cells = sig_table.rows[row_idx].cells
+            cells[0].text = role
+            cells[1].text = name
+            cells[2].text = date_text
+            cells[3].text = hash_text
+            add_signature_image(cells[1], signature_file)
+        
+        # Initiator
+        initiator = getattr(req, 'initiator', None)
+        fill_row(
+            1,
+            'Initiated By',
+            self._user_name(initiator, 'Pending'),
+            getattr(req, 'initiator_signature', None),
+            self._format_dt(getattr(req, 'initiated_at', None), 'Pending'),
+            self._short_hash(req, 'initiator_signature_hash', '-'),
+        )
         
         # Reviewer
-        if self.requisition.reviewer:
-            sig_table.rows[row_idx].cells[0].text = 'Reviewed By:'
-            sig_table.rows[row_idx].cells[1].text = self.requisition.reviewer.full_name
-            sig_table.rows[row_idx].cells[2].text = self.requisition.reviewed_at.strftime('%Y-%m-%d %H:%M') if self.requisition.reviewed_at else ''
-            row_idx += 1
+        reviewer = getattr(req, 'reviewer', None)
+        if reviewer:
+            fill_row(
+                2,
+                'Reviewed By',
+                self._user_name(reviewer, 'Pending'),
+                getattr(req, 'reviewer_signature', None),
+                self._format_dt(getattr(req, 'reviewed_at', None), 'Pending'),
+                self._short_hash(req, 'reviewer_signature_hash', '-'),
+            )
+        else:
+            fill_row(2, 'Reviewed By', 'Pending', None, 'Pending', '-')
         
         # Approvers
-        approval_logs = list(self.requisition.approval_logs.filter_by(action='approved').order_by(ApprovalLog.approval_level))
+        approved_logs = self._approved_logs()
+        level_labels = {1: '1st Approver', 2: '2nd Approver', 3: 'Senior Approver (3rd)'}
         
-        for i in range(1, self.requisition.required_approvals + 1):
-            approver_log = next((log for log in approval_logs if log.approval_level == i), None)
+        for level in range(1, required + 1):
+            row_idx = 2 + level
+            role = level_labels.get(level, f'Approver {level}')
+            approver_log = next((log for log in approved_logs if log.approval_level == level), None)
             if approver_log:
-                sig_table.rows[row_idx].cells[0].text = f'Approver {i}:'
-                sig_table.rows[row_idx].cells[1].text = approver_log.approver.full_name
-                sig_table.rows[row_idx].cells[2].text = approver_log.created_at.strftime('%Y-%m-%d %H:%M')
+                fill_row(
+                    row_idx,
+                    role,
+                    self._user_name(getattr(approver_log, 'approver', None), 'Pending'),
+                    getattr(approver_log, 'signature_path', None),
+                    self._format_dt(getattr(approver_log, 'created_at', None), 'Pending'),
+                    self._short_hash(approver_log, 'signature_hash', '-'),
+                )
             else:
-                sig_table.rows[row_idx].cells[0].text = f'Approver {i}:'
-                sig_table.rows[row_idx].cells[1].text = '________________'
-                sig_table.rows[row_idx].cells[2].text = '________________'
-            row_idx += 1
+                fill_row(row_idx, role, 'Pending', None, 'Pending', '-')
     
     def _add_excel_signatures(self, ws, start_row):
         """Add signatures and document security sections to Excel"""
