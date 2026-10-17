@@ -184,10 +184,17 @@ def print_view(id):
     approval_logs = ApprovalLog.query.filter_by(requisition_id=id).order_by(ApprovalLog.approval_level).all()
     approved_levels = [log.approval_level for log in approval_logs if log.action == 'approved']
     pending_approvals = [lvl for lvl in range(1, requisition.required_approvals + 1) if lvl not in approved_levels]
+    try:
+        from app.utils.workflow import build_workflow
+        workflow = build_workflow(requisition, approval_logs)
+    except ImportError:
+        # app.utils.workflow is not present in this codebase; the template skips the section
+        workflow = None
     return render_template('requisition/print.html',
                            requisition=requisition,
                            approval_logs=approval_logs,
-                           pending_approvals=pending_approvals)
+                           pending_approvals=pending_approvals,
+                           workflow=workflow)
 
 @requisition_bp.route('/review/<int:id>', methods=['GET', 'POST'])
 @login_required
