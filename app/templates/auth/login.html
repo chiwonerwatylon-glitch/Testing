@@ -62,7 +62,19 @@
             color: #f8f9fa;
         }
 
+        .brand-topbar {
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        [data-bs-theme="dark"] .brand-topbar {
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+        }
+
         .theme-toggle {
+            position: fixed;
+            top: 76px;
+            right: 1rem;
+            z-index: 1030;
             width: 38px;
             height: 38px;
             flex-shrink: 0;
@@ -125,7 +137,7 @@
 </head>
 <body class="auth-page">
 
-    <header class="brand-topbar fixed-top bg-body border-bottom shadow-sm">
+    <header class="brand-topbar fixed-top bg-body border-bottom">
         <div class="container-fluid d-flex justify-content-between align-items-center px-3 px-md-4 py-2">
             <a href="{{ url_for('auth.login') }}" class="d-flex align-items-center gap-2 text-decoration-none">
                 <img
@@ -141,18 +153,11 @@
                 <span class="d-none d-md-inline">
                     <span class="text-body">A member of </span><span class="brand-red fw-semibold">First Mutual Holdings Group</span>
                 </span>
-                <button
-                    type="button"
-                    id="themeToggle"
-                    class="btn btn-outline-secondary rounded-circle theme-toggle d-inline-flex align-items-center justify-content-center"
-                    aria-label="Switch dark / light mode"
-                    title="Switch dark / light mode"
-                >
-                    <i class="bi bi-moon-stars"></i>
-                </button>
             </div>
         </div>
     </header>
+
+    <button type="button" id="themeToggle" class="btn btn-outline-secondary rounded-circle theme-toggle d-inline-flex align-items-center justify-content-center" aria-label="Switch dark / light mode" title="Switch dark / light mode"><i class="bi bi-moon-stars"></i></button>
 
     <div class="page-container">
 
