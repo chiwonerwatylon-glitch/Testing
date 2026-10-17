@@ -986,3 +986,34 @@ a:hover {
 [data-bs-theme="dark"] .alert { color: inherit; }
 [data-bs-theme="dark"] .modal-content { background-color: #1a1d21; color: #dee2e6; }
 [data-bs-theme="dark"] .auth-container { background: #0b0d10; }
+
+/* ============ RECENT REQUISITIONS (theme-aware) ============ */
+.recent-header { background-color: var(--bs-body-bg); border-bottom: 1px solid var(--fml-border); }
+.recent-thead th {
+    background-color: var(--bs-tertiary-bg, #f1f3f5);
+    color: var(--bs-body-color) !important;
+    border-bottom: 1px solid var(--fml-border);
+}
+.recent-table td, .recent-table th { color: var(--bs-body-color); border-color: var(--bs-border-color); }
+.recent-table tbody tr:hover { background-color: var(--bs-tertiary-bg, #f1f3f5); }
+.recent-table .fw-bold { color: var(--fml-red) !important; }
+.recent-table .btn-outline-primary { color: var(--fml-red); border-color: var(--fml-red); }
+.recent-table .btn-outline-primary:hover { background-color: var(--fml-red); color: #fff; }
+
+[data-bs-theme="dark"] .recent-header { background-color: #1a1d21; border-bottom-color: #2c3035; }
+[data-bs-theme="dark"] .recent-header h5 { color: #f1f3f5; }
+[data-bs-theme="dark"] .recent-thead th { background-color: #22262b; color: #f1f3f5 !important; border-bottom-color: #343a40; }
+[data-bs-theme="dark"] .recent-table td, [data-bs-theme="dark"] .recent-table th { color: #dee2e6; border-color: #343a40; }
+[data-bs-theme="dark"] .recent-table tbody tr:hover { background-color: #22262b; }
+[data-bs-theme="dark"] .recent-table .fw-bold { color: #ff7b8c !important; }
+[data-bs-theme="dark"] .recent-table .text-muted { color: #adb5bd !important; }
+[data-bs-theme="dark"] .recent-table .btn-outline-primary { color: #ff7b8c; border-color: #ff7b8c; }
+[data-bs-theme="dark"] .recent-table .btn-outline-primary:hover { background-color: #d21f3c; color: #fff; }
+[data-bs-theme="dark"] .recent-table .badge.bg-info { color: #0b2e3f !important; }
+[data-bs-theme="dark"] .recent-table .badge.bg-warning { color: #3a2a07 !important; }
+
+/* Stat cards: keep muted labels readable in dark mode */
+[data-bs-theme="dark"] .stat-card h6.text-muted { color: #adb5bd !important; }
+[data-bs-theme="dark"] .stat-card h2 { color: #f1f3f5; }
+[data-bs-theme="dark"] .stat-card .card-footer { background-color: #1f2328; border-top-color: #2c3035; }
+[data-bs-theme="dark"] .card-footer { background-color: #1f2328; }
