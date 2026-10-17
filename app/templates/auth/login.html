@@ -31,73 +31,8 @@
         rel="stylesheet"
     >
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-
-    <style>
-        .auth-brand {
-            background:
-                radial-gradient(900px 500px at 10% -10%, rgba(210, 31, 60, .35), transparent 60%),
-                radial-gradient(700px 400px at 110% 110%, rgba(210, 31, 60, .25), transparent 60%),
-                linear-gradient(160deg, #0b0d10 0%, #111417 60%, #1a0d10 100%);
-        }
-        .auth-logo {
-            height: 52px;
-            width: auto;
-            background: #fff;
-            border-radius: 10px;
-            padding: 6px;
-        }
-        .feature-icon {
-            width: 40px;
-            height: 40px;
-            flex: 0 0 40px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: .75rem;
-            background: rgba(210, 31, 60, .15);
-            color: #ff6b7f;
-        }
-        .btn-signin {
-            background: linear-gradient(135deg, #D21F3C 0%, #A01830 100%);
-            border: 0;
-            box-shadow: 0 10px 25px -10px rgba(210, 31, 60, .7);
-        }
-        .btn-signin:hover,
-        .btn-signin:focus {
-            filter: brightness(1.06);
-            color: #fff;
-        }
-        .form-control:focus {
-            border-color: #D21F3C;
-            box-shadow: 0 0 0 .2rem rgba(210, 31, 60, .2);
-        }
-        .auth-card { width: 100%; }
-        .auth-panel {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-        @media (min-width: 992px) {
-            .auth-panel {
-                flex: 0 0 36%;
-                max-width: 36%;
-            }
-            .auth-brand {
-                flex: 1 1 64%;
-                min-width: 0;
-            }
-        }
-        .eyebrow { letter-spacing: .08em; }
-        .theme-toggle {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 10;
-            width: 38px;
-            height: 38px;
-        }
-    </style>
 </head>
-<body class="bg-body-tertiary">
+<body class="bg-body-tertiary auth-page">
 
     <button
         type="button"

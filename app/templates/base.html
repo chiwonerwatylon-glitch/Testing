@@ -35,63 +35,6 @@
     >
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 
-    <style>
-        :root {
-            --fml-brand: #D21F3C;
-            --footer-h: 44px;
-        }
-        body {
-            padding-bottom: var(--footer-h);
-        }
-        .app-footer {
-            height: var(--footer-h);
-            z-index: 1020;
-        }
-        .text-brand {
-            color: var(--fml-brand) !important;
-        }
-        .btn-brand {
-            --bs-btn-color: #fff;
-            --bs-btn-bg: var(--fml-brand);
-            --bs-btn-border-color: var(--fml-brand);
-            --bs-btn-hover-bg: #A01830;
-            --bs-btn-hover-border-color: #A01830;
-            --bs-btn-hover-color: #fff;
-            --bs-btn-active-bg: #A01830;
-            --bs-btn-active-border-color: #A01830;
-            --bs-btn-active-color: #fff;
-        }
-        .border-brand {
-            border-color: var(--fml-brand) !important;
-        }
-        .nav-pills .nav-link.active {
-            --bs-nav-pills-link-active-bg: var(--fml-brand);
-        }
-        .sidebar-link {
-            border-radius: .5rem;
-            color: var(--bs-body-color);
-        }
-        .sidebar-link:hover {
-            background: var(--bs-tertiary-bg);
-        }
-        .sidebar-link.active {
-            background: rgba(210, 31, 60, .12);
-            color: var(--fml-brand);
-            font-weight: 600;
-        }
-        .app-main {
-            min-height: calc(100vh - 56px - var(--footer-h));
-        }
-        @media (min-width: 992px) {
-            .sidebar-col {
-                position: sticky;
-                top: 56px;
-                height: calc(100vh - 56px - var(--footer-h));
-                overflow-y: auto;
-            }
-        }
-    </style>
-
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-body-tertiary d-flex flex-column min-vh-100">
