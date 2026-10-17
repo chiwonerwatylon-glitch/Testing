@@ -26,10 +26,11 @@
             
             {% if current_user.can_review %}
             <li class="nav-item">
-                <a class="nav-link {{ 'active' if request.endpoint == 'requisition.pending_review' }}" href="{{ url_for('requisition.pending_review') }}">
+                <a class="nav-link {{ 'active' if request.endpoint == 'requisition.review_queue' }}" href="{{ url_for('requisition.review_queue') }}">
                     <i class="bi bi-eye me-2"></i>
-                    Pending Review
+                    Review Queue
                     <span class="badge bg-info ms-2" id="pending-review-count"></span>
+
                 </a>
             </li>
             {% endif %}
