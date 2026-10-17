@@ -60,18 +60,24 @@ def index():
 @login_required
 @active_user_required
 def ask():
-    """Handle assistant questions via POST JSON payload."""
+    """Handle assistant questions via JSON POST payload."""
     question, error_response = _parse_request_json()
     if error_response is not None:
         body, status = error_response
         return jsonify(body), status
+
+    # At this point question is guaranteed to be a non-empty, trimmed string
+    assert question is not None
 
     site_text = get_fml_website_text()
 
     try:
         answer = ask_gemini(question, SYSTEM_CONTEXT, site_text)
     except (GeminiError, RuntimeError):
-        return jsonify({"error": UNAVAILABLE_MESSAGE}), HTTPStatus.SERVICE_UNAVAILABLE
+        return (
+            jsonify({"error": UNAVAILABLE_MESSAGE}),
+            HTTPStatus.SERVICE_UNAVAILABLE,
+        )
 
     sources = list(DEFAULT_SOURCES)
     if site_text:
