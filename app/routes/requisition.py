@@ -115,7 +115,13 @@ def create():
         flash(f'Requisition {requisition.requisition_number} created successfully and sent for review.', 'success')
         return redirect(url_for('requisition.detail', id=requisition.id))
     
-    return render_template('requisition/create.html')
+    reviewers = User.query.filter_by(can_review=True, is_active=True).all()
+    approvers = User.query.filter_by(can_approve=True, is_active=True).all()
+    senior_approvers = User.query.filter_by(is_senior_approver=True, is_active=True).all()
+    return render_template('requisition/create.html',
+                           reviewers=reviewers,
+                           approvers=approvers,
+                           senior_approvers=senior_approvers)
 
 @requisition_bp.route('/list')
 @login_required
@@ -171,10 +177,14 @@ def detail(id):
         if level not in approved_levels:
             pending_approvals.append(level)
     
+    from app.utils.workflow import build_workflow
+    workflow = build_workflow(requisition, approval_logs)
+    
     return render_template('requisition/detail.html', 
                           requisition=requisition, 
                           approval_logs=approval_logs,
-                          pending_approvals=pending_approvals)
+                          pending_approvals=pending_approvals,
+                          workflow=workflow)
 
 @requisition_bp.route('/print/<int:id>')
 @login_required
@@ -380,6 +390,31 @@ def pending_review():
                           requisitions=requisitions, 
                           title='Pending Review',
                           status_filter='pending_review')
+
+@requisition_bp.route('/review-queue')
+@login_required
+@active_user_required
+@reviewer_required
+def review_queue():
+    page = request.args.get('page', 1, type=int)
+    tab = request.args.get('tab', 'pending')
+    tab_statuses = {
+        'pending': ['pending_review'],
+        'awaiting_approval': ['pending_approval', 'partially_approved'],
+        'completed': ['approved', 'rejected'],
+    }
+    if tab not in tab_statuses:
+        tab = 'pending'
+    base = Requisition.query.filter(Requisition.reviewer_id == current_user.id) if tab == 'completed' else Requisition.query
+    query = base.filter(Requisition.status.in_(tab_statuses[tab]))
+    requisitions = query.order_by(Requisition.created_at.desc()).paginate(page=page, per_page=20)
+    tabs = [
+        (key, label, Requisition.query.filter(Requisition.status.in_(tab_statuses[key])).count())
+        for key, label in [('pending', 'Pending Review'), ('awaiting_approval', 'Awaiting Approval'), ('completed', 'Completed')]
+    ]
+    return render_template('requisition/list.html', requisitions=requisitions,
+                           title='Review Queue', status_filter=tab, tabs=tabs, queue_tab=tab)
+
 
 @requisition_bp.route('/pending-approval')
 @login_required

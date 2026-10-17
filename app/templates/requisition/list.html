@@ -12,8 +12,16 @@
         </a>
         {% endif %}
     </div>
-    
+    {% if tabs %}
+    <ul class="nav nav-tabs mb-3">
+        {% for key, label, count in tabs %}
+        <li class="nav-item"><a class="nav-link {{ 'active' if queue_tab == key }}" href="{{ url_for('requisition.review_queue', tab=key) }}">{{ label }} <span class="badge bg-secondary">{{ count }}</span></a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
     <!-- Filters -->
+
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" class="row g-3">
@@ -110,14 +118,14 @@
                 <ul class="pagination justify-content-center mb-0">
                     {% if requisitions.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.prev_num, status=status_filter) }}">Previous</a>
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.prev_num, status=status_filter, tab=queue_tab|default(None)) }}">Previous</a>
                     </li>
                     {% endif %}
                     
                     {% for page_num in requisitions.iter_pages() %}
                         {% if page_num %}
                             <li class="page-item {{ 'active' if page_num == requisitions.page }}">
-                                <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, status=status_filter) }}">{{ page_num }}</a>
+                                <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, status=status_filter, tab=queue_tab|default(None)) }}">{{ page_num }}</a>
                             </li>
                         {% else %}
                             <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -126,7 +134,7 @@
                     
                     {% if requisitions.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.next_num, status=status_filter) }}">Next</a>
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=requisitions.next_num, status=status_filter, tab=queue_tab|default(None)) }}">Next</a>
                     </li>
                     {% endif %}
                 </ul>
