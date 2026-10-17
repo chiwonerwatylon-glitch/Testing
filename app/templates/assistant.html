@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Assistant · First Mutual Life{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="h4 mb-1"><i class="bi bi-chat-dots me-2"></i>Assistant</h1>
+    <p class="text-body-secondary mb-0">Ask a question about the requisition system or First Mutual Life.</p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form id="assistant-form">
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label for="question" class="form-label">Your question</label>
+                <textarea id="question" class="form-control" rows="4" maxlength="1000" required></textarea>
+            </div>
+            <button type="submit" id="ask-btn" class="btn btn-brand">Ask</button>
+        </form>
+
+        <div id="answer-box" class="mt-4" style="display:none;">
+            <h2 class="h6 text-uppercase text-body-secondary">Answer</h2>
+            <div id="answer" class="border rounded p-3 bg-body-tertiary" style="white-space: pre-wrap;"></div>
+            <div id="sources" class="small text-body-secondary mt-2"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var form = document.getElementById('assistant-form');
+    var btn = document.getElementById('ask-btn');
+    var box = document.getElementById('answer-box');
+    var answerEl = document.getElementById('answer');
+    var sourcesEl = document.getElementById('sources');
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var question = document.getElementById('question').value.trim();
+        if (!question) { return; }
+        btn.disabled = true;
+        box.style.display = 'block';
+        answerEl.textContent = 'Thinking...';
+        sourcesEl.textContent = '';
+
+        fetch("{{ url_for('assistant.ask') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.getElementById('csrf_token').value
+            },
+            body: JSON.stringify({ question: question })
+        })
+        .then(function (res) {
+            return res.json().catch(function () { return {}; }).then(function (data) {
+                return { ok: res.ok, data: data };
+            });
+        })
+        .then(function (r) {
+            if (r.ok && r.data.answer) {
+                answerEl.textContent = r.data.answer;
+                sourcesEl.textContent = 'Sources: ' + (r.data.sources || []).join(', ');
+            } else {
+                answerEl.textContent = r.data.error || 'The assistant is unavailable right now.';
+            }
+        })
+        .catch(function () {
+            answerEl.textContent = 'The assistant is unavailable right now.';
+        })
+        .finally(function () { btn.disabled = false; });
+    });
+})();
+</script>
+{% endblock %}
