@@ -37,7 +37,8 @@
                             <table class="table table-sm table-borderless">
                                 <tr><td class="fw-bold">Initiator:</td><td>{{ requisition.initiator.full_name }}</td></tr>
                                 <tr><td class="fw-bold">Reviewer:</td><td>{{ requisition.reviewer.full_name if requisition.reviewer }}</td></tr>
-                                <tr><td class="fw-bold">Total Amount:</td><td class="fw-bold text-fml-primary">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit) }}</td></tr>
+                                <tr><td class="fw-bold">Total Debit:</td><td class="fw-bold text-fml-primary">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit or 0) }}</td></tr>
+                                <tr><td class="fw-bold">Total Amount to be Credited:</td><td class="fw-bold text-fml-primary">{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_credit or 0) }}</td></tr>
                             </table>
                         </div>
                     </div>
