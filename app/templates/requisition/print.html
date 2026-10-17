@@ -52,21 +52,45 @@
             border: 1px solid #ccc;
         }
 
+        /* Footer sits in the normal page flow. A fixed footer repeats on every
+           printed page and covers the text above it. */
         .doc-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            position: static;
+            margin-top: 14px;
             font-size: 8pt;
             color: #555;
             border-top: 1px solid #ccc;
             padding-top: 4px;
         }
 
+        /* Text flows to the next page instead of overlapping. Rows and blocks never split. */
         .req-signature-block,
         .req-sec,
-        .req-security {
+        .req-security,
+        .req-control-block,
+        .req-doc-header,
+        .req-doc-footer,
+        table,
+        tr,
+        .req-reason-box,
+        .requisition-document-wrapper .row > div {
             break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        p,
+        .req-doc-table td,
+        .req-items-table td,
+        .req-auth-table td {
+            overflow-wrap: anywhere;
+        }
+
+        .req-control-block {
+            margin-top: 18px;
         }
 
         @media print {
