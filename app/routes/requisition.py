@@ -5,6 +5,7 @@ from app.models import Requisition, RequisitionItem, ApprovalLog, AuditLog, User
 from app.utils.decorators import active_user_required, initiator_required, reviewer_required, approver_required
 from app.utils.document_generator import RequisitionDocumentGenerator
 from datetime import datetime, timedelta
+from app.utils.notify import notify, active_users
 
 import os
 
@@ -111,6 +112,10 @@ def create():
         )
         db.session.add(audit)
         
+        db.session.flush()
+        notify(active_users(can_review=True),
+               f"{requisition.requisition_number} from {current_user.full_name} is awaiting review.",
+               requisition, 'pending', exclude_id=current_user.id)
         db.session.commit()
         
         flash(f'Requisition {requisition.requisition_number} created successfully and sent for review.', 'success')
@@ -294,6 +299,17 @@ def review(id):
             ip_address=request.remote_addr
         )
         db.session.add(audit)
+        if action == 'approve':
+            notify(active_users(can_approve=True),
+                   f"{requisition.requisition_number} was reviewed and is awaiting approval.",
+                   requisition, 'pending', exclude_id=current_user.id)
+            notify([requisition.initiator],
+                   f"{requisition.requisition_number} passed review and was sent for approval.",
+                   requisition, 'update')
+        else:
+            notify([requisition.initiator],
+                   f"{requisition.requisition_number} was rejected at review.",
+                   requisition, 'rejected')
         db.session.commit()
         
         return redirect(url_for('requisition.detail', id=id))
@@ -376,6 +392,21 @@ def approve(id):
             ip_address=request.remote_addr
         )
         db.session.add(audit)
+        if requisition.status == 'approved':
+            notify([requisition.initiator],
+                   f"{requisition.requisition_number} has been fully approved.",
+                   requisition, 'approved')
+        elif requisition.status == 'partially_approved':
+            notify([requisition.initiator],
+                   f"{requisition.requisition_number}: approval {next_level} of {requisition.required_approvals} completed.",
+                   requisition, 'update')
+            notify(active_users(can_approve=True),
+                   f"{requisition.requisition_number} is awaiting approval {next_level + 1}.",
+                   requisition, 'pending', exclude_id=current_user.id)
+        else:
+            notify([requisition.initiator],
+                   f"{requisition.requisition_number} was rejected at approval.",
+                   requisition, 'rejected')
         db.session.commit()
         
         return redirect(url_for('requisition.detail', id=id))
@@ -752,6 +783,8 @@ def batch_create():
         details=f'Batch {batch.batch_number}: {len(requisitions)} payment(s), {batch.currency} {total}',
         ip_address=request.remote_addr))
     try:
+        for r in requisitions:
+            notify([r.initiator], f"{r.requisition_number} was batched in {batch.batch_number}.", r, 'batched')
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

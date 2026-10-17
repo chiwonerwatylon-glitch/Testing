@@ -226,3 +226,74 @@ function validateFileSize(input, maxSizeMB = 5) {
  * ======================================= */
 // If you later use ES modules / bundlers, you can export helpers:
 // export { fetchStats, formatCurrency, showLoading, hideLoading, validateFileSize };
+
+/* =========================================
+ * NOTIFICATIONS (navbar bell)
+ * ======================================= */
+(function () {
+    const menu = document.getElementById('notifications-menu');
+    if (!menu) return;
+    const badge = document.getElementById('notification-count');
+    const dropdown = menu.closest('.dropdown');
+    const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+    const icons = {
+        pending: 'bi-hourglass-split',
+        update: 'bi-arrow-repeat',
+        approved: 'bi-check-circle-fill text-success',
+        rejected: 'bi-x-circle-fill text-danger',
+        batched: 'bi-box-seam text-primary',
+    };
+
+    function esc(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function render(data) {
+        const items = data.items || [];
+        if (badge) {
+            badge.textContent = data.unread > 9 ? '9+' : data.unread;
+            badge.style.display = data.unread > 0 ? '' : 'none';
+        }
+        if (!items.length) {
+            menu.innerHTML = '<li><span class="dropdown-item-text text-body-secondary p-3">No notifications yet</span></li>';
+            return;
+        }
+        const rows = items.map(function (n) {
+            const href = n.requisition_id ? '/detail/' + n.requisition_id : '#';
+            const unread = n.is_read ? '' : ' bg-body-secondary fw-semibold';
+            const icon = icons[n.category] || 'bi-bell';
+            return '<li><a class="dropdown-item d-flex gap-2 align-items-start py-2 text-wrap' + unread + '" href="' + href + '">' +
+                '<i class="bi ' + icon + ' mt-1"></i>' +
+                '<span><span class="d-block small">' + esc(n.message) + '</span>' +
+                '<span class="d-block small text-body-secondary">' + esc(n.created_at) + '</span></span></a></li>';
+        });
+        menu.innerHTML = '<li><span class="dropdown-header">Notifications</span></li>' + rows.join('');
+    }
+
+    function load() {
+        fetch('/api/notifications', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(render)
+            .catch(function (err) { console.log('Notifications error:', err); });
+    }
+
+    // Opening the bell marks everything as read (the list keeps its unread highlight for this view)
+    if (dropdown) {
+        dropdown.addEventListener('show.bs.dropdown', function () {
+            fetch('/api/notifications/read', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrf, Accept: 'application/json' },
+                credentials: 'same-origin'
+            }).then(function () {
+                if (badge) badge.style.display = 'none';
+            }).catch(function () {});
+        });
+    }
+
+    load();
+    setInterval(load, 60000);
+})();
+
