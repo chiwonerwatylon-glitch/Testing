@@ -11,7 +11,7 @@
                     <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>My Profile</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <!-- Profile Info (Read-only) -->
@@ -37,25 +37,21 @@
                             </div>
                         </div>
                         
-                        <hr>
-                        
-                        <!-- Editable Fields -->
-                        <h5 class="mb-3">Editable Information</h5>
-                        
+                        <!-- Position, phone and signature are managed by the administrator -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="position" class="form-label">Position</label>
-                                <input type="text" class="form-control" id="position" name="position" value="{{ current_user.position or '' }}">
+                                <label class="form-label text-muted">Position</label>
+                                <p class="form-control-plaintext">{{ current_user.position or '-' }}</p>
                             </div>
                             <div class="col-md-6">
-                                <label for="phone" class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="phone" name="phone" value="{{ current_user.phone or '' }}">
+                                <label class="form-label text-muted">Phone Number</label>
+                                <p class="form-control-plaintext">{{ current_user.phone or '-' }}</p>
                             </div>
                         </div>
                         
-                        <!-- Signature -->
+                        <!-- Signature (read-only) -->
                         <div class="mb-4">
-                            <label for="signature" class="form-label">Signature</label>
+                            <label class="form-label text-muted">Signature</label>
                             {% if current_user.signature_path %}
                             <div class="mb-2">
                                 <img src="{{ url_for('static', filename='signatures/' + current_user.signature_path) }}" 
@@ -65,12 +61,15 @@
                             {% else %}
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                No signature uploaded. You need to upload your signature to initiate, review, or approve requisitions.
+                                No signature on file. Please contact the administrator to have your signature added before you initiate, review, or approve requisitions.
                             </div>
                             {% endif %}
-                            <input type="file" class="form-control" id="signature" name="signature" accept="image/*">
-                            <div class="form-text">Upload a new signature to replace the existing one</div>
-                            <div id="signature-preview" class="mt-2"></div>
+                            <div class="form-text">
+                                Your signature and profile details can only be changed by an administrator.
+                                {% if current_user.role == 'superuser' %}
+                                <a href="{{ url_for('admin.user_edit', id=current_user.id) }}">Edit via user administration</a>.
+                                {% endif %}
+                            </div>
                         </div>
                         
                         <hr>
@@ -81,15 +80,15 @@
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label for="current_password" class="form-label">Current Password</label>
-                                <input type="password" class="form-control" id="current_password" name="current_password">
+                                <input type="password" class="form-control" id="current_password" name="current_password" required>
                             </div>
                             <div class="col-md-4">
                                 <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password">
+                                <input type="password" class="form-control" id="new_password" name="new_password" required>
                             </div>
                             <div class="col-md-4">
                                 <label for="confirm_new_password" class="form-label">Confirm New Password</label>
-                                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password">
+                                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" required>
                             </div>
                         </div>
                         
@@ -125,7 +124,7 @@
                         </div>
                         
                         <button type="submit" class="btn btn-fml-primary">
-                            <i class="bi bi-save me-2"></i>Save Changes
+                            <i class="bi bi-key me-2"></i>Change Password
                         </button>
                     </form>
                 </div>
@@ -133,23 +132,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.getElementById('signature').addEventListener('change', function(e) {
-        const preview = document.getElementById('signature-preview');
-        const file = e.target.files[0];
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                preview.innerHTML = `<img src="${e.target.result}" class="signature-preview-img" alt="Signature Preview">`;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.innerHTML = '';
-        }
-    });
-</script>
 {% endblock %}

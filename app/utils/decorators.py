@@ -3,11 +3,17 @@ from flask import redirect, url_for, flash, abort
 from flask_login import current_user
 
 def superuser_required(f):
+    """Restrict a view to the admin (superuser) role.
+
+    Anonymous users are sent to the login page; authenticated non-admin users
+    receive a 403 response.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'superuser':
-            flash('You need superuser privileges to access this page.', 'danger')
-            return redirect(url_for('requisition.dashboard'))
+        if not current_user.is_authenticated:
+            return redirect(url_for('auth.login'))
+        if current_user.role != 'superuser':
+            abort(403)
         return f(*args, **kwargs)
     return decorated_function
 
