@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+from datetime import datetime
 
 from flask import Flask
 from flask_login import LoginManager
@@ -63,7 +65,59 @@ def create_app() -> Flask:
         _ensure_batch_columns()
         seed_superuser(app)
 
+        # Wire up the Gemini assistant: live system data and daily KB refresh
+        from app.utils.gemini import (
+            register_system_data_provider,
+            start_background_refresh,
+        )
+
+        register_system_data_provider(_system_snapshot)
+        start_background_refresh()
+
     return app
+
+
+def _system_snapshot() -> str:
+    """Return a privacy-conscious summary of requisition counts.
+
+    Contains counts only (no names, account numbers, bank details or payment
+    reasons). Returns an empty string on failure so the assistant never breaks.
+    """
+    try:
+        from app.models import Requisition
+
+        first_of_month = datetime.utcnow().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+
+        total = Requisition.query.count()
+        draft = Requisition.query.filter_by(status="draft").count()
+        pending_review = Requisition.query.filter_by(
+            status="pending_review"
+        ).count()
+        pending_approval = (
+            Requisition.query.filter_by(status="pending_approval").count()
+            + Requisition.query.filter_by(status="partially_approved").count()
+        )
+        approved_this_month = Requisition.query.filter(
+            Requisition.status == "approved",
+            Requisition.completed_at >= first_of_month,
+        ).count()
+        rejected = Requisition.query.filter_by(status="rejected").count()
+
+        return (
+            f"Total requisitions: {total}\n"
+            f"Draft: {draft}\n"
+            f"Pending review: {pending_review}\n"
+            f"Pending approval: {pending_approval}\n"
+            f"Approved this month: {approved_this_month}\n"
+            f"Rejected: {rejected}\n"
+        )
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Failed to build system snapshot for assistant"
+        )
+        return ""
 
 
 @login_manager.user_loader
