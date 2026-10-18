@@ -22,6 +22,23 @@ document.addEventListener('DOMContentLoaded', function () {
         new bootstrap.Tooltip(el);
     });
 
+    // Date inputs: open the native picker on click/tap where supported.
+    // showPicker() throws if unsupported or not user-activated, so failures
+    // are ignored and the browser's default behaviour applies.
+    document.querySelectorAll('input[type="date"]').forEach(input => {
+        input.addEventListener('click', function () {
+            try {
+                if (typeof this.showPicker === 'function') {
+                    this.showPicker();
+                }
+            } catch (e) {
+                // Fall back to native behaviour
+            }
+        });
+        // Intentionally a no-op; focus keeps the native default behaviour.
+        input.addEventListener('focus', function () {});
+    });
+
     // Auto-dismiss alerts after 5 seconds (unless .alert-permanent)
     const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
     alerts.forEach(alert => {

@@ -419,6 +419,15 @@ a:hover {
     font-size: 0.85rem;
 }
 
+/* Date inputs: clickable, and native picker/indicator matches the theme */
+input[type="date"].form-control {
+    cursor: pointer;
+}
+
+[data-bs-theme="dark"] input[type="date"].form-control {
+    color-scheme: dark;
+}
+
 .form-check-input:checked {
     background-color: var(--fml-red);
     border-color: var(--fml-red);
