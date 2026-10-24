@@ -639,6 +639,58 @@ def _mark_rejected(requisition: Requisition, reason: str) -> None:
     requisition.rejected_at = datetime.utcnow()
 
 
+def _can_recall(requisition: Requisition) -> bool:
+    """Initiator may recall until the first approval has been given."""
+    if requisition.status == "pending_review":
+        return True
+    return (
+        requisition.status == "pending_approval"
+        and ApprovalLog.query.filter_by(requisition_id=requisition.id).count() == 0
+    )
+
+
+@requisition_bp.route("/recall/<int:id>", methods=["POST"])
+@login_required
+@active_user_required
+def recall(id: int):
+    """Initiator pulls a requisition back before approval starts."""
+    requisition = Requisition.query.get_or_404(id)
+
+    if requisition.initiator_id != current_user.id:
+        flash("Only the initiator can recall this requisition.", "danger")
+        return redirect(url_for("requisition.detail", id=id))
+    if not _can_recall(requisition):
+        flash(
+            "This requisition can no longer be recalled because approval has started.",
+            "warning",
+        )
+        return redirect(url_for("requisition.detail", id=id))
+
+    was_reviewed = requisition.status == "pending_approval"
+    requisition.status = "recalled"
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="recall_requisition",
+            entity_type="requisition",
+            entity_id=requisition.id,
+            details=f"Recalled {requisition.requisition_number} by initiator",
+            ip_address=request.remote_addr,
+        )
+    )
+    notify(
+        active_users(can_approve=True) if was_reviewed else active_users(can_review=True),
+        f"{requisition.requisition_number} was recalled by "
+        f"{current_user.full_name} for corrections.",
+        requisition,
+        "update",
+        exclude_id=current_user.id,
+    )
+    db.session.commit()
+    flash("Requisition recalled. Make your changes and resubmit.", "success")
+    return redirect(url_for("requisition.edit", id=id))
+
+
 @requisition_bp.route("/edit/<int:id>", methods=["GET", "POST"])
 @login_required
 @active_user_required
@@ -649,8 +701,8 @@ def edit(id: int):
     if requisition.initiator_id != current_user.id:
         flash("Only the initiator can edit and resubmit this requisition.", "danger")
         return redirect(url_for("requisition.detail", id=id))
-    if requisition.status != "rejected":
-        flash("Only rejected requisitions can be edited.", "warning")
+    if requisition.status not in ("rejected", "recalled"):
+        flash("Only rejected or recalled requisitions can be edited.", "warning")
         return redirect(url_for("requisition.detail", id=id))
 
     if request.method == "POST":
@@ -658,6 +710,7 @@ def edit(id: int):
             flash("You must upload your signature before resubmitting.", "warning")
             return redirect(url_for("auth.profile"))
 
+        prior_status = requisition.status
         f = request.form
         requisition.in_favor_of = f.get("in_favor_of")
         requisition.bank_name = f.get("bank_name")
@@ -731,6 +784,10 @@ def edit(id: int):
         requisition.initiated_at = datetime.utcnow()
         requisition.completed_at = None
         requisition.resubmit_count = (requisition.resubmit_count or 0) + 1
+        if prior_status == "recalled":
+            requisition.rejection_reason = None
+            requisition.rejected_by_id = None
+            requisition.rejected_at = None
         requisition.status = "pending_review"
 
         db.session.add(
@@ -740,8 +797,8 @@ def edit(id: int):
                 entity_type="requisition",
                 entity_id=requisition.id,
                 details=(
-                    f"Resubmitted {requisition.requisition_number} after rejection: "
-                    f"{requisition.rejection_reason}"
+                    f"Resubmitted {requisition.requisition_number} after "
+                    f"{prior_status}: {requisition.rejection_reason or 'recalled by initiator'}"
                 ),
                 ip_address=request.remote_addr,
             )
@@ -932,6 +989,7 @@ def reports():
         "partially_approved",
         "approved",
         "rejected",
+        "recalled",
     ]
     currencies = ["USD", "ZWG", "ZAR", "BWP"]
     departments = ["EB", "FIN"]
