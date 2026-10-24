@@ -127,6 +127,11 @@ def create():
             status="pending_review",
         )
 
+        bank_error = _apply_paying_bank(requisition, request.form)
+        if bank_error:
+            flash(bank_error, "danger")
+            return redirect(url_for("requisition.create"))
+
         account_names = request.form.getlist("account_name[]")
         account_codes = request.form.getlist("account_code[]")
         account_locations = request.form.getlist("account_location[]")
@@ -211,6 +216,7 @@ def create():
 
     return render_template(
         "requisition/create.html",
+        paying_banks=_paying_banks(),
         reviewers=reviewers,
         approvers=approvers,
         senior_approvers=senior_approvers,
@@ -632,6 +638,51 @@ def approve(id: int):
 # Rejection and resubmission
 # ---------------------------------------------------------------------------
 
+def _apply_paying_bank(requisition: Requisition, form) -> str | None:
+    """Set the paying bank snapshot from the form. Returns an error message or None."""
+    from app.models import PayingBank
+
+    choice = (form.get("paying_bank") or "").strip()
+    if choice == "other":
+        vals = {
+            k: (form.get(f"paying_{k}") or "").strip()
+            for k in ("bank_name", "account_name", "account_number", "swift_code")
+        }
+        if not all(vals.values()):
+            return (
+                "For another paying bank, enter the bank name, account name, "
+                "account number and SWIFT code."
+            )
+        requisition.paying_bank_id = None
+        requisition.paying_bank_name = vals["bank_name"]
+        requisition.paying_account_name = vals["account_name"]
+        requisition.paying_account_number = vals["account_number"]
+        requisition.paying_swift_code = vals["swift_code"]
+        requisition.paying_currency = requisition.currency
+        return None
+
+    bank = PayingBank.query.get(int(choice)) if choice.isdigit() else None
+    if not bank:
+        return "Select the bank the payment will be made from."
+    requisition.paying_bank_id = bank.id
+    requisition.paying_bank_name = bank.bank_name
+    requisition.paying_account_name = bank.account_name
+    requisition.paying_account_number = bank.account_number
+    requisition.paying_swift_code = bank.swift_code
+    requisition.paying_currency = bank.currency_code
+    return None
+
+
+def _paying_banks():
+    from app.models import PayingBank
+
+    return (
+        PayingBank.query.filter_by(is_active=True)
+        .order_by(PayingBank.bank_name, PayingBank.account_number)
+        .all()
+    )
+
+
 def _mark_rejected(requisition: Requisition, reason: str) -> None:
     requisition.status = "rejected"
     requisition.rejection_reason = reason
@@ -719,6 +770,12 @@ def edit(id: int):
         requisition.reason_for_payment = f.get("reason_for_payment")
         requisition.itf_263 = f.get("itf_263", "NA")
         requisition.currency = f.get("currency", "USD")
+
+        bank_error = _apply_paying_bank(requisition, f)
+        if bank_error:
+            db.session.rollback()
+            flash(bank_error, "danger")
+            return redirect(url_for("requisition.edit", id=id))
 
         for old in requisition.items.all():
             db.session.delete(old)
@@ -822,6 +879,7 @@ def edit(id: int):
     ).all()
     return render_template(
         "requisition/create.html",
+        paying_banks=_paying_banks(),
         req=requisition,
         reviewers=reviewers,
         approvers=approvers,

@@ -229,6 +229,12 @@ def _ensure_rejection_columns(inspector) -> None:
         "rejected_by_id": "INTEGER",
         "rejected_at": "TIMESTAMP",
         "resubmit_count": "INTEGER DEFAULT 0",
+        "paying_bank_id": "INTEGER",
+        "paying_bank_name": "VARCHAR(100)",
+        "paying_account_name": "VARCHAR(150)",
+        "paying_account_number": "VARCHAR(50)",
+        "paying_currency": "VARCHAR(10)",
+        "paying_swift_code": "VARCHAR(20)",
     }
     with db.engine.begin() as conn:
         for name, ddl in wanted.items():

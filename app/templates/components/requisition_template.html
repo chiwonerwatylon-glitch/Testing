@@ -51,6 +51,17 @@
 
     <hr class="req-doc-divider">
 
+    {# ============ PAYING BANK ============ #}
+    {% if requisition.paying_bank_name %}
+    <div class="mb-3 p-2 border rounded small">
+        <strong>Paying Bank:</strong> {{ requisition.paying_bank_name }}
+        &nbsp;|&nbsp; <strong>Account Name:</strong> {{ requisition.paying_account_name }}
+        &nbsp;|&nbsp; <strong>Account No:</strong> {{ requisition.paying_account_number }}
+        {% if requisition.paying_currency %}&nbsp;|&nbsp; <strong>Currency:</strong> {{ requisition.paying_currency }}{% endif %}
+        {% if requisition.paying_swift_code %}&nbsp;|&nbsp; <strong>SWIFT:</strong> {{ requisition.paying_swift_code }}{% endif %}
+    </div>
+    {% endif %}
+
     {# ============ PAYMENT DETAILS ============ #}
     <div class="row mb-4">
         <div class="col-6">

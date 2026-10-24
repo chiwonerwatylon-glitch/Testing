@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Paying Banks - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="mb-0"><i class="bi bi-bank me-2"></i>Paying Banks</h2>
+        <a href="{{ url_for('admin.banks_template') }}" class="btn btn-outline-primary">
+            <i class="bi bi-download me-2"></i>Download Excel template
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold">Upload paying banks</h6>
+            <p class="text-muted small mb-3">
+                Columns, in order: Bank Name, Account Name, Account Number, Currency Code.
+                Rows already in the list (same bank and account number) are updated; others are added.
+                These appear in the Paying Bank drop-down when an initiator creates a requisition.
+            </p>
+            <form method="POST" action="{{ url_for('admin.banks_upload') }}" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="file" accept=".xlsx" class="form-control" style="max-width: 360px;" required>
+                <button type="submit" class="btn btn-fml-primary"><i class="bi bi-upload me-2"></i>Upload</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr><th>Bank Name</th><th>Account Name</th><th>Account Number</th><th>Currency</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for b in banks %}
+                    <tr>
+                        <td>{{ b.bank_name }}</td>
+                        <td>{{ b.account_name }}</td>
+                        <td>{{ b.account_number }}</td>
+                        <td>{{ b.currency_code }}</td>
+                        <td>
+                            {% if b.is_active %}<span class="badge bg-success">Active</span>
+                            {% else %}<span class="badge bg-secondary">Disabled</span>{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form method="POST" action="{{ url_for('admin.banks_toggle', id=b.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-secondary">{{ 'Disable' if b.is_active else 'Enable' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No paying banks yet. Download the template, fill it in and upload it.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
