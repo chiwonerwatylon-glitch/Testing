@@ -162,7 +162,7 @@
                                             <td>{{ acct_cell("account_code[]", "code", it.account_code if it else "", true) }}</td>
                                             <td>{{ acct_cell("account_location[]", "location", (it.account_location or "") if it else "", false) }}</td>
                                             <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB" {{ 'selected' if it and it.account_department == 'EB' }}>EB</option><option value="FIN" {{ 'selected' if it and it.account_department == 'FIN' }}>FIN</option></select></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="details[]" value="{{ (it.details or '') if it }}"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="details[]" maxlength="35" placeholder="From Reason for Payment" value="{{ (it.details or '') if it }}"></td>
                                             <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]" value="{{ it.debit if it and it.debit }}"></td>
                                             <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]" value="{{ it.credit if it and it.credit }}"></td>
                                             <td>
@@ -266,6 +266,27 @@ document.addEventListener('DOMContentLoaded', function() {
         setVal('location', match[0].location);
     });
 
+    // Details default to the Reason for Payment, trimmed to 35 characters,
+    // until the initiator types their own.
+    const reasonEl = document.getElementById('reason_for_payment');
+    function reasonDetail() {
+        return (reasonEl.value || '').replace(/\s+/g, ' ').trim().slice(0, 35);
+    }
+    function syncDetails() {
+        const text = reasonDetail();
+        document.querySelectorAll('input[name="details[]"]').forEach(i => {
+            if (i.dataset.custom !== '1') i.value = text;
+        });
+    }
+    document.getElementById('itemsTableBody').addEventListener('input', function(e) {
+        if (e.target.name === 'details[]') e.target.dataset.custom = '1';
+    });
+    document.querySelectorAll('input[name="details[]"]').forEach(i => {
+        if (i.value) i.dataset.custom = '1';
+    });
+    reasonEl.addEventListener('input', syncDetails);
+    syncDetails();
+
     function createRow() {
         const row = document.createElement('tr');
         row.className = 'item-row';
@@ -274,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>${acctCell('account_code[]', 'code', true)}</td>
             <td>${acctCell('account_location[]', 'location', false)}</td>
             <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB">EB</option><option value="FIN">FIN</option></select></td>
-            <td><input type="text" class="form-control form-control-sm" name="details[]"></td>
+            <td><input type="text" class="form-control form-control-sm" name="details[]" maxlength="35" placeholder="From Reason for Payment" value="${esc(reasonDetail())}"></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]"></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]"></td>
             <td>

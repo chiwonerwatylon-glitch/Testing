@@ -61,6 +61,14 @@ class RequisitionDocumentGenerator:
     # PDF
     # ---------------------------------------------------------------------
 
+    def _payment_stamp(self):
+        """(text, hex colour) for fully approved requisitions, else None."""
+        if getattr(self.requisition, "status", None) != "approved":
+            return None
+        if getattr(self.requisition, "is_paid", False):
+            return "PAID", "198754"
+        return "NOT PAID", "DC3545"
+
     def generate_pdf(self) -> io.BytesIO:
         """Generate PDF version of requisition."""
         buffer = io.BytesIO()
@@ -118,6 +126,27 @@ class RequisitionDocumentGenerator:
                 f"Requisition No: {self.requisition.requisition_number}", ref_style
             )
         )
+
+        stamp = self._payment_stamp()
+        if stamp:
+            stamp_color = colors.HexColor("#" + stamp[1])
+            stamp_table = Table(
+                [[Paragraph(
+                    f'<font color="#{stamp[1]}"><b>{stamp[0]}</b></font>',
+                    ParagraphStyle(
+                        "Stamp", parent=styles["Normal"], fontSize=22,
+                        alignment=TA_CENTER, leading=26,
+                    ),
+                )]],
+                colWidths=[2.4 * inch],
+                style=TableStyle([
+                    ("BOX", (0, 0), (-1, -1), 3, stamp_color),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ]),
+            )
+            elements.append(stamp_table)
+            elements.append(Spacer(1, 0.15 * inch))
 
         # Red divider line
         elements.append(
@@ -448,6 +477,20 @@ class RequisitionDocumentGenerator:
         )
         req_num.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+        stamp = self._payment_stamp()
+        if stamp:
+            stamp_p = doc.add_paragraph()
+            stamp_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            stamp_run = stamp_p.add_run(f"  {stamp[0]}  ")
+            stamp_run.bold = True
+            stamp_run.font.size = Pt(24)
+            stamp_run.font.color.rgb = RGBColor.from_string(stamp[1])
+            rPr = stamp_run._r.get_or_add_rPr()
+            bdr = OxmlElement("w:bdr")
+            for k, v in (("w:val", "single"), ("w:sz", "24"), ("w:space", "4"), ("w:color", stamp[1])):
+                bdr.set(qn(k), v)
+            rPr.append(bdr)
+
         doc.add_paragraph()
 
         # Payment details table
@@ -613,6 +656,13 @@ class RequisitionDocumentGenerator:
         ws["A3"] = f"Requisition No: {self.requisition.requisition_number}"
         ws["A3"].alignment = Alignment(horizontal="center")
 
+        stamp = self._payment_stamp()
+        if stamp:
+            ws.merge_cells("A4:G4")
+            ws["A4"] = stamp[0]
+            ws["A4"].font = Font(bold=True, size=18, color=stamp[1])
+            ws["A4"].alignment = Alignment(horizontal="center")
+
         # Payment details
         row = 5
         payment_data = [
@@ -732,6 +782,9 @@ class RequisitionDocumentGenerator:
         writer.writerow(
             [f"Requisition No: {self.requisition.requisition_number}"]
         )
+        stamp = self._payment_stamp()
+        if stamp:
+            writer.writerow([f"Payment Status: {stamp[0]}"])
         writer.writerow([])
 
         # Payment details
