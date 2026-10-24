@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document verification - First Mutual Life</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 1.5rem; color: #1a1a1a; }
+  .card { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
+  .banner { padding: .9rem 1rem; border-radius: 8px; font-weight: bold; font-size: 1.15rem; margin-bottom: 1rem; }
+  .ok { background: #e6f4ea; color: #146c2e; } .bad { background: #fdeaea; color: #b02a37; }
+  table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+  td, th { text-align: left; padding: .45rem .3rem; border-bottom: 1px solid #eee; font-size: .95rem; }
+  th { color: #666; font-weight: normal; width: 42%; }
+  h3 { margin: 1.2rem 0 .3rem; color: #D21F3C; }
+  .stamp { display: inline-block; border: 3px solid; padding: 0 .6rem; font-weight: bold; letter-spacing: .1em; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2 style="margin-top:0">First Mutual Life Assurance Company</h2>
+  {% if valid %}
+  <div class="banner ok">Verified: this document matches our records.</div>
+  <table>
+    <tr><th>Requisition No</th><td>{{ requisition.requisition_number }}</td></tr>
+    <tr><th>Status</th><td>{{ requisition.status.replace('_', ' ').title() }}</td></tr>
+    {% if requisition.status == 'approved' %}
+    <tr><th>Payment</th><td>
+      {% if requisition.is_paid %}<span class="stamp" style="color:#198754">PAID</span>{% else %}<span class="stamp" style="color:#dc3545">NOT PAID</span>{% endif %}
+    </td></tr>
+    {% endif %}
+    <tr><th>In favor of</th><td>{{ requisition.in_favor_of }}</td></tr>
+    <tr><th>Authorised amount</th><td>{{ requisition.currency }} {{ '{:,.2f}'.format(requisition.total_debit or 0) }}</td></tr>
+    <tr><th>Document code</th><td>{{ document_code }}</td></tr>
+  </table>
+  <h3>Signed by</h3>
+  <table>
+    {% for s in signers %}
+    <tr><th>{{ s.role }}</th><td>{{ s.name }}<br><small style="color:#666">{{ s.when }}</small></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="banner bad">Not verified: this link does not match the current record.</div>
+  <p>The document code is missing or the requisition has changed since this copy was produced. Do not rely on this copy. Download a fresh one from the requisition system.</p>
+  {% endif %}
+</div>
+</body>
+</html>

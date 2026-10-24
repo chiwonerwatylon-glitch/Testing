@@ -39,6 +39,21 @@ FML_RED_HEX = "D21F3C"
 FML_BLACK_HEX = "1A1A1A"
 
 
+class _LinkedQR(Image):
+    """QR code image that is also a clickable link in the PDF."""
+
+    def __init__(self, png_bytes, url, size):
+        super().__init__(io.BytesIO(png_bytes), width=size, height=size)
+        self._url = url
+
+    def draw(self):
+        super().draw()
+        if self._url:
+            self.canv.linkURL(
+                self._url, (0, 0, self.drawWidth, self.drawHeight), relative=1
+            )
+
+
 class RequisitionDocumentGenerator:
     """Generate PDF, DOCX, Excel and CSV representations of a requisition."""
 
@@ -160,28 +175,38 @@ class RequisitionDocumentGenerator:
         )
         elements.append(Spacer(1, 0.3 * inch))
 
-        # Payment details
-        payment_data = [
-            ["Paying Bank:", self._paying_bank_text()],
-            ["In Favor Of:", self.requisition.in_favor_of],
-            ["Bank:", self.requisition.bank_name],
-            ["Branch:", self.requisition.branch],
-            ["Account Number:", self.requisition.account_number],
-            ["Reason for Payment:", self.requisition.reason_for_payment],
-            ["ITF 263:", self.requisition.itf_263],
-        ]
+        # Payment details: label/value pairs side by side
+        label_bg = colors.HexColor("#F8F8F8")
+        cell_style = ParagraphStyle(
+            "DetailCell", parent=styles["Normal"], fontSize=9.5, leading=12
+        )
+        bold_style = ParagraphStyle(
+            "DetailLabel", parent=cell_style, fontName="Helvetica-Bold"
+        )
 
-        payment_table = Table(payment_data, colWidths=[2.5 * inch, 4.5 * inch])
+        def _p(text, style=cell_style):
+            return Paragraph(_xml_escape(str(text or "")), style)
+
+        rows = [[_p("Paying Bank:", bold_style), _p(self._paying_bank_text()), "", ""]]
+        for a, b, c, d in self._detail_rows():
+            rows.append([_p(a, bold_style), _p(b), _p(c, bold_style), _p(d)])
+        rows.append([_p("Reason for Payment:", bold_style), _p(self.requisition.reason_for_payment), "", ""])
+
+        last = len(rows) - 1
+        payment_table = Table(
+            rows, colWidths=[1.25 * inch, 2.25 * inch, 1.25 * inch, 2.25 * inch]
+        )
         payment_table.setStyle(
             TableStyle(
                 [
-                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-                    ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("SPAN", (1, 0), (3, 0)),
+                    ("SPAN", (1, last), (3, last)),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F8F8F8")),
+                    ("BACKGROUND", (0, 0), (0, -1), label_bg),
+                    ("BACKGROUND", (2, 1), (2, last - 1), label_bg),
                 ]
             )
         )
@@ -261,7 +286,7 @@ class RequisitionDocumentGenerator:
             )
         )
         elements.append(items_table)
-        elements.append(Spacer(1, 0.5 * inch))
+        elements.append(Spacer(1, 0.25 * inch))
 
         # Signatures section
         auth_style = ParagraphStyle(
@@ -272,54 +297,17 @@ class RequisitionDocumentGenerator:
         elements.append(Paragraph("<b>AUTHORIZATION</b>", auth_style))
         elements.append(Spacer(1, 0.2 * inch))
 
-        req = self.requisition
-        sig_data = [["Role", "Name & Signature", "Date Signed", "Signature Hash"]]
-
-        sig_data.append(
-            [
-                "Initiated By:",
-                self._user_name(getattr(req, "initiator", None), "-"),
-                self._format_dt(getattr(req, "initiated_at", None), "-"),
-                self._short_hash(req, "initiator_signature_hash", "-"),
-            ]
+        sig_name_style = ParagraphStyle(
+            "SigName", parent=styles["Normal"], fontSize=9, leading=11
         )
-
-        reviewer = getattr(req, "reviewer", None)
-        sig_data.append(
-            [
-                "Reviewed By:",
-                self._user_name(reviewer, "Pending") if reviewer else "Pending",
-                self._format_dt(getattr(req, "reviewed_at", None), "Pending"),
-                self._short_hash(req, "reviewer_signature_hash", "-"),
-            ]
-        )
-
-        approved_logs = self._approved_logs()
-        required = getattr(req, "required_approvals", 0) or 0
-        for level in range(1, required + 1):
-            log = next(
-                (
-                    l
-                    for l in approved_logs
-                    if getattr(l, "approval_level", None) == level
-                ),
-                None,
-            )
-            if log:
-                sig_data.append(
-                    [
-                        f"Approver {level}:",
-                        self._user_name(
-                            getattr(log, "approver", None), "Pending"
-                        ),
-                        self._format_dt(
-                            getattr(log, "created_at", None), "Pending"
-                        ),
-                        self._short_hash(log, "signature_hash", "-"),
-                    ]
-                )
-            else:
-                sig_data.append([f"Approver {level}:", "Pending", "Pending", "-"])
+        sig_data = [["Role", "Name & Signature", "Date & Time Signed", "Signature Hash"]]
+        for sg in self._signers():
+            name_cell = [Paragraph(f"<b>{_xml_escape(sg['name'])}</b>", sig_name_style)]
+            if sg["sig"]:
+                w, h = self._fit(sg["sig"], 1.3 * inch, 0.42 * inch)
+                name_cell.append(Spacer(1, 3))
+                name_cell.append(Image(sg["sig"], width=w, height=h, hAlign="LEFT"))
+            sig_data.append([sg["role"], name_cell, sg["when"], sg["hash"]])
 
         sig_table = Table(
             sig_data,
@@ -330,8 +318,8 @@ class RequisitionDocumentGenerator:
                 [
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("BACKGROUND", (0, 0), (-1, 0), FML_BLACK),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -376,7 +364,11 @@ class RequisitionDocumentGenerator:
             ],
             [
                 Paragraph("Verify at", label_style),
-                _cell(security.get("verify_url")),
+                Paragraph(
+                    f'<a href="{_xml_escape(str(security.get("verify_url") or ""))}" color="blue">'
+                    f'{_xml_escape(str(security.get("verify_url") or "-"))}</a>',
+                    value_style,
+                ),
             ],
             [
                 Paragraph(
@@ -389,7 +381,7 @@ class RequisitionDocumentGenerator:
         ]
         security_table = Table(
             security_data,
-            colWidths=[1.6 * inch, 5.4 * inch],
+            colWidths=[1.4 * inch, 3.6 * inch],
         )
         security_table.setStyle(
             TableStyle(
@@ -403,13 +395,30 @@ class RequisitionDocumentGenerator:
                 ]
             )
         )
+        qr_png = self._qr_png(security.get("verify_url") or "")
+        if qr_png:
+            qr_cell = [
+                _LinkedQR(qr_png, security.get("verify_url"), 1.25 * inch),
+                Paragraph(
+                    f'<a href="{_xml_escape(str(security.get("verify_url")))}" color="blue">Scan or click to verify</a>',
+                    ParagraphStyle("QRCap", parent=note_style, alignment=TA_CENTER),
+                ),
+            ]
+            security_block = Table(
+                [[security_table, qr_cell]],
+                colWidths=[5.1 * inch, 1.9 * inch],
+                style=TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                  ("LEFTPADDING", (0, 0), (-1, -1), 0)]),
+            )
+        else:
+            security_block = security_table
         elements.append(Spacer(1, 0.3 * inch))
         elements.append(
             KeepTogether(
                 [
                     Paragraph("<b>DOCUMENT SECURITY</b>", auth_style),
                     Spacer(1, 0.1 * inch),
-                    security_table,
+                    security_block,
                 ]
             )
         )
@@ -494,24 +503,29 @@ class RequisitionDocumentGenerator:
         doc.add_paragraph()
 
         # Payment details table
-        payment_table = doc.add_table(rows=7, cols=2)
+        detail_rows = self._detail_rows()
+        payment_table = doc.add_table(rows=len(detail_rows) + 2, cols=4)
         payment_table.style = "Table Grid"
 
-        payment_data = [
-            ("Paying Bank:", self._paying_bank_text()),
-            ("In Favor Of:", self.requisition.in_favor_of),
-            ("Bank:", self.requisition.bank_name),
-            ("Branch:", self.requisition.branch),
-            ("Account Number:", self.requisition.account_number),
-            ("Reason for Payment:", self.requisition.reason_for_payment),
-            ("ITF 263:", self.requisition.itf_263),
-        ]
+        def _set(cell, text, bold=False):
+            cell.text = str(text or "")
+            if bold and cell.paragraphs[0].runs:
+                cell.paragraphs[0].runs[0].bold = True
 
-        for i, (label, value) in enumerate(payment_data):
-            payment_table.rows[i].cells[0].text = label
-            payment_table.rows[i].cells[1].text = str(value)
-            cell_run = payment_table.rows[i].cells[0].paragraphs[0].runs[0]
-            cell_run.bold = True
+        top = payment_table.rows[0].cells
+        _set(top[0], "Paying Bank:", True)
+        _set(top[1], self._paying_bank_text())
+        top[1].merge(top[3])
+        for i, (a, b, c, d) in enumerate(detail_rows, 1):
+            cells = payment_table.rows[i].cells
+            _set(cells[0], a, True)
+            _set(cells[1], b)
+            _set(cells[2], c, True)
+            _set(cells[3], d)
+        bottom = payment_table.rows[-1].cells
+        _set(bottom[0], "Reason for Payment:", True)
+        _set(bottom[1], self.requisition.reason_for_payment)
+        bottom[1].merge(bottom[3])
 
         doc.add_paragraph()
 
@@ -600,6 +614,25 @@ class RequisitionDocumentGenerator:
             cell_run = security_table.rows[i].cells[0].paragraphs[0].runs[0]
             cell_run.bold = True
 
+        verify_url = security.get("verify_url") or ""
+        qr_png = self._qr_png(verify_url)
+        if qr_png and verify_url:
+            qr_para = doc.add_paragraph()
+            qr_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            run = qr_para.add_run()
+            run.add_picture(io.BytesIO(qr_png), width=Inches(1.3))
+            # make the QR picture itself clickable
+            from docx.opc.constants import RELATIONSHIP_TYPE as RT
+
+            r_id = qr_para.part.relate_to(verify_url, RT.HYPERLINK, is_external=True)
+            link = OxmlElement("w:hyperlink")
+            link.set(qn("r:id"), r_id)
+            qr_para._p.remove(run._r)
+            link.append(run._r)
+            qr_para._p.append(link)
+            cap = doc.add_paragraph()
+            self._docx_link(cap, verify_url, "Scan or click to verify")
+
         note_para = doc.add_paragraph()
         note_run = note_para.add_run(
             "Any change to amounts, status or approvals invalidates this document code."
@@ -663,27 +696,31 @@ class RequisitionDocumentGenerator:
             ws["A4"].font = Font(bold=True, size=18, color=stamp[1])
             ws["A4"].alignment = Alignment(horizontal="center")
 
-        # Payment details
+        # Payment details: label/value pairs side by side
         row = 5
-        payment_data = [
-            ("Paying Bank:", self._paying_bank_text()),
-            ("In Favor Of:", self.requisition.in_favor_of),
-            ("Bank:", self.requisition.bank_name),
-            ("Branch:", self.requisition.branch),
-            ("Account Number:", self.requisition.account_number),
-            ("Reason for Payment:", self.requisition.reason_for_payment),
-            ("ITF 263:", self.requisition.itf_263),
-        ]
-
-        for label, value in payment_data:
-            ws[f"A{row}"] = label
-            ws[f"A{row}"].font = Font(bold=True)
-            ws[f"B{row}"] = value
-            ws[f"A{row}"].border = border
-            ws[f"B{row}"].border = border
-            row += 1
-
+        ws[f"A{row}"] = "Paying Bank:"
+        ws[f"A{row}"].font = Font(bold=True)
+        ws[f"B{row}"] = self._paying_bank_text()
+        ws.merge_cells(f"B{row}:G{row}")
+        for col in "ABCDEFG":
+            ws[f"{col}{row}"].border = border
         row += 1
+        for a, b, c, d in self._detail_rows():
+            ws[f"A{row}"], ws[f"B{row}"], ws[f"D{row}"], ws[f"E{row}"] = a, b, c, d
+            ws[f"A{row}"].font = Font(bold=True)
+            ws[f"D{row}"].font = Font(bold=True)
+            ws.merge_cells(f"B{row}:C{row}")
+            ws.merge_cells(f"E{row}:G{row}")
+            for col in "ABCDEFG":
+                ws[f"{col}{row}"].border = border
+            row += 1
+        ws[f"A{row}"] = "Reason for Payment:"
+        ws[f"A{row}"].font = Font(bold=True)
+        ws[f"B{row}"] = self.requisition.reason_for_payment
+        ws.merge_cells(f"B{row}:G{row}")
+        for col in "ABCDEFG":
+            ws[f"{col}{row}"].border = border
+        row += 2
 
         # Items header
         headers = [
@@ -789,13 +826,12 @@ class RequisitionDocumentGenerator:
 
         # Payment details
         writer.writerow(["Paying Bank:", self._paying_bank_text()])
-        writer.writerow(["In Favor Of:", self.requisition.in_favor_of])
-        writer.writerow(["Bank:", self.requisition.bank_name])
-        writer.writerow(["Branch:", self.requisition.branch])
-        writer.writerow(["Account Number:", self.requisition.account_number])
+        for row_cells in self._detail_rows():
+            writer.writerow(row_cells)
         writer.writerow(["Reason for Payment:", self.requisition.reason_for_payment])
-        writer.writerow(["ITF 263:", self.requisition.itf_263])
         writer.writerow([])
+
+        # Items        writer.writerow([])
 
         # Items
         writer.writerow(
@@ -837,53 +873,9 @@ class RequisitionDocumentGenerator:
 
         # Signatures
         writer.writerow(["AUTHORIZATION"])
-        writer.writerow(["Role", "Name", "Date Signed", "Signature Hash"])
-        req = self.requisition
-        writer.writerow(
-            [
-                "Initiated By",
-                self._user_name(getattr(req, "initiator", None)),
-                self._format_dt(getattr(req, "initiated_at", None)),
-                self._short_hash(req, "initiator_signature_hash"),
-            ]
-        )
-
-        reviewer = getattr(req, "reviewer", None)
-        writer.writerow(
-            [
-                "Reviewed By",
-                self._user_name(reviewer, "Pending") if reviewer else "Pending",
-                self._format_dt(getattr(req, "reviewed_at", None), "Pending"),
-                self._short_hash(req, "reviewer_signature_hash"),
-            ]
-        )
-
-        approved_logs = self._approved_logs()
-        level_labels = {
-            1: "1st Approver",
-            2: "2nd Approver",
-            3: "Senior Approver (3rd)",
-        }
-        for level in range(1, (req.required_approvals or 0) + 1):
-            label = level_labels.get(level, f"Approver {level}")
-            log = next(
-                (l for l in approved_logs if l.approval_level == level), None
-            )
-            if log:
-                writer.writerow(
-                    [
-                        label,
-                        self._user_name(
-                            getattr(log, "approver", None), "Pending"
-                        ),
-                        self._format_dt(
-                            getattr(log, "created_at", None), "Pending"
-                        ),
-                        self._short_hash(log, "signature_hash"),
-                    ]
-                )
-            else:
-                writer.writerow([label, "Pending", "Pending", ""])
+        writer.writerow(["Role", "Name", "Date & Time Signed", "Signature Hash"])
+        for sg in self._signers():
+            writer.writerow([sg["role"], sg["name"], sg["when"], sg["hash"]])
 
         # Document security
         writer.writerow([])
@@ -904,16 +896,137 @@ class RequisitionDocumentGenerator:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _add_docx_signatures(self, doc: Document) -> None:
-        """Add signatures section to DOCX: names, signature images, dates and hashes."""
-        req = self.requisition
-        required = req.required_approvals or 0
+    # ------------------------------------------------------------------
+    # Shared content: side-by-side details, signers, QR
+    # ------------------------------------------------------------------
 
-        sig_table = doc.add_table(rows=3 + required, cols=4)
+    @staticmethod
+    def _fmt_long(value, default: str = "-") -> str:
+        """e.g. '24 October 2026, 13:36'."""
+        if not value:
+            return default
+        try:
+            return value.strftime("%d %B %Y, %H:%M")
+        except Exception:
+            return default
+
+    @staticmethod
+    def _fmt_ts(value, default: str = "Pending") -> str:
+        """Signature timestamp with seconds, e.g. '24 Oct 2026, 13:36:05'."""
+        if not value:
+            return default
+        try:
+            return value.strftime("%d %b %Y, %H:%M:%S")
+        except Exception:
+            return default
+
+    def _detail_pairs(self):
+        """(label, value) pairs shown two per row, side by side."""
+        r = self.requisition
+        return [
+            ("In Favor Of:", r.in_favor_of or ""),
+            ("Bank:", r.bank_name or ""),
+            ("Branch:", r.branch or ""),
+            ("Account Number:", r.account_number or ""),
+            ("Currency:", r.currency or ""),
+            ("ITF 263:", r.itf_263 or ""),
+            ("Date Created:", self._fmt_long(getattr(r, "created_at", None))),
+            ("Date Completed:", self._fmt_long(getattr(r, "completed_at", None))),
+        ]
+
+    def _detail_rows(self):
+        """Rows of up to 4 cells: label, value, label, value."""
+        pairs = self._detail_pairs()
+        return [
+            [*pairs[i], *(pairs[i + 1] if i + 1 < len(pairs) else ("", ""))]
+            for i in range(0, len(pairs), 2)
+        ]
+
+    def _sig_file(self, filename):
+        if not filename:
+            return None
+        try:
+            path = os.path.join(
+                current_app.root_path, "static", "signatures",
+                os.path.basename(str(filename)),
+            )
+            return path if os.path.exists(path) else None
+        except Exception:  # pragma: no cover
+            return None
+
+    def _signers(self):
+        """Everyone involved, in order: role, name, signature file, timestamp, hash."""
+        req = self.requisition
+        out = []
+
+        def add(role, user, sig, when, hash_text="-"):
+            if user:
+                out.append({
+                    "role": role,
+                    "name": self._user_name(user, "Pending"),
+                    "sig": self._sig_file(sig) or self._sig_file(getattr(user, "signature_path", None)),
+                    "when": self._fmt_ts(when),
+                    "hash": hash_text,
+                })
+            else:
+                out.append({"role": role, "name": "Pending", "sig": None,
+                            "when": "Pending", "hash": "-"})
+
+        add("Initiated By", getattr(req, "initiator", None),
+            getattr(req, "initiator_signature", None),
+            getattr(req, "initiated_at", None) or getattr(req, "created_at", None),
+            self._short_hash(req, "initiator_signature_hash", "-"))
+        add("Reviewed By", getattr(req, "reviewer", None),
+            getattr(req, "reviewer_signature", None),
+            getattr(req, "reviewed_at", None),
+            self._short_hash(req, "reviewer_signature_hash", "-"))
+
+        labels = {1: "1st Approver", 2: "2nd Approver", 3: "Senior Approver (3rd)"}
+        logs = self._approved_logs()
+        for level in range(1, (req.required_approvals or 0) + 1):
+            log = next((l for l in logs if l.approval_level == level), None)
+            role = labels.get(level, f"Approver {level}")
+            if log:
+                add(role, getattr(log, "approver", None),
+                    getattr(log, "signature_path", None),
+                    getattr(log, "created_at", None),
+                    self._short_hash(log, "signature_hash", "-"))
+            else:
+                add(role, None, None, None)
+
+        if getattr(req, "is_paid", False) and getattr(req, "paid_by", None):
+            add("Marked Paid By", req.paid_by, None, getattr(req, "paid_at", None))
+        return out
+
+    def _qr_png(self, url: str):
+        """PNG bytes of a QR code for the verification URL, or None."""
+        try:
+            import qrcode
+
+            buf = io.BytesIO()
+            qrcode.make(url).save(buf, format="PNG")
+            return buf.getvalue()
+        except Exception:  # pragma: no cover
+            return None
+
+    @staticmethod
+    def _fit(path, max_w, max_h):
+        """(width, height) scaled to fit the box, keeping the aspect ratio."""
+        from PIL import Image as PILImage
+
+        with PILImage.open(path) as im:
+            w, h = im.size
+        scale = min(max_w / w, max_h / h)
+        return w * scale, h * scale
+
+
+    def _add_docx_signatures(self, doc: Document) -> None:
+        """Signatures section: everyone involved with name, signature image and timestamp."""
+        signers = self._signers()
+        sig_table = doc.add_table(rows=1 + len(signers), cols=4)
         sig_table.style = "Table Grid"
 
-        # Header
-        headers = ["Role", "Name & Signature", "Date Signed", "Signature Hash"]
+        headers = ["Role", "Name & Signature", "Date & Time Signed", "Signature Hash"]
         for i, header in enumerate(headers):
             cell = sig_table.rows[0].cells[i]
             cell.text = header
@@ -925,188 +1038,80 @@ class RequisitionDocumentGenerator:
             shd.set(qn("w:fill"), FML_BLACK_HEX)
             cell._element.get_or_add_tcPr().append(shd)
 
-        def add_signature_image(cell, filename: str | None) -> None:
-            if not filename:
-                return
-            try:
-                path = os.path.join(
-                    current_app.root_path,
-                    "static",
-                    "signatures",
-                    os.path.basename(str(filename)),
-                )
-                if os.path.exists(path):
-                    run = cell.paragraphs[0].add_run()
+        for idx, sg in enumerate(signers, 1):
+            cells = sig_table.rows[idx].cells
+            cells[0].text = sg["role"]
+            cells[1].text = sg["name"]
+            cells[2].text = sg["when"]
+            cells[3].text = sg["hash"]
+            if sg["sig"]:
+                try:
+                    run = cells[1].paragraphs[0].add_run()
                     run.add_break()
-                    run.add_picture(path, width=Inches(1.4))
-            except Exception as e:  # pragma: no cover - best-effort logging
-                current_app.logger.warning(
-                    "Could not add signature image %s to DOCX: %s", filename, e
-                )
+                    run.add_picture(sg["sig"], width=Inches(1.4))
+                except Exception as e:  # pragma: no cover
+                    current_app.logger.warning(
+                        "Could not add signature image to DOCX: %s", e
+                    )
 
-        def fill_row(
-            row_idx: int,
-            role: str,
-            name: str,
-            signature_file: str | None,
-            date_text: str,
-            hash_text: str,
-        ) -> None:
-            cells = sig_table.rows[row_idx].cells
-            cells[0].text = role
-            cells[1].text = name
-            cells[2].text = date_text
-            cells[3].text = hash_text
-            add_signature_image(cells[1], signature_file)
+    @staticmethod
+    def _docx_link(paragraph, url: str, text: str) -> None:
+        """Append a clickable hyperlink run to a DOCX paragraph."""
+        from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
-        # Initiator
-        initiator = getattr(req, "initiator", None)
-        fill_row(
-            1,
-            "Initiated By",
-            self._user_name(initiator, "Pending"),
-            getattr(req, "initiator_signature", None),
-            self._format_dt(getattr(req, "initiated_at", None), "Pending"),
-            self._short_hash(req, "initiator_signature_hash", "-"),
-        )
-
-        # Reviewer
-        reviewer = getattr(req, "reviewer", None)
-        if reviewer:
-            fill_row(
-                2,
-                "Reviewed By",
-                self._user_name(reviewer, "Pending"),
-                getattr(req, "reviewer_signature", None),
-                self._format_dt(getattr(req, "reviewed_at", None), "Pending"),
-                self._short_hash(req, "reviewer_signature_hash", "-"),
-            )
-        else:
-            fill_row(2, "Reviewed By", "Pending", None, "Pending", "-")
-
-        # Approvers
-        approved_logs = self._approved_logs()
-        level_labels = {
-            1: "1st Approver",
-            2: "2nd Approver",
-            3: "Senior Approver (3rd)",
-        }
-
-        for level in range(1, required + 1):
-            row_idx = 2 + level
-            role = level_labels.get(level, f"Approver {level}")
-            approver_log = next(
-                (log for log in approved_logs if log.approval_level == level),
-                None,
-            )
-            if approver_log:
-                fill_row(
-                    row_idx,
-                    role,
-                    self._user_name(
-                        getattr(approver_log, "approver", None), "Pending"
-                    ),
-                    getattr(approver_log, "signature_path", None),
-                    self._format_dt(
-                        getattr(approver_log, "created_at", None), "Pending"
-                    ),
-                    self._short_hash(approver_log, "signature_hash", "-"),
-                )
-            else:
-                fill_row(row_idx, role, "Pending", None, "Pending", "-")
+        r_id = paragraph.part.relate_to(url, RT.HYPERLINK, is_external=True)
+        link = OxmlElement("w:hyperlink")
+        link.set(qn("r:id"), r_id)
+        run = OxmlElement("w:r")
+        rpr = OxmlElement("w:rPr")
+        color = OxmlElement("w:color")
+        color.set(qn("w:val"), "0563C1")
+        underline = OxmlElement("w:u")
+        underline.set(qn("w:val"), "single")
+        rpr.append(color)
+        rpr.append(underline)
+        run.append(rpr)
+        t = OxmlElement("w:t")
+        t.text = text
+        run.append(t)
+        link.append(run)
+        paragraph._p.append(link)
 
     def _add_excel_signatures(self, ws, start_row: int) -> int:
-        """Add signatures and document security sections to Excel."""
-        req = self.requisition
+        """Signatures (with images and timestamps) and document security with QR."""
+        from openpyxl.drawing.image import Image as XLImage
 
         header_fill = PatternFill(
-            start_color=FML_BLACK_HEX,
-            end_color=FML_BLACK_HEX,
-            fill_type="solid",
+            start_color=FML_BLACK_HEX, end_color=FML_BLACK_HEX, fill_type="solid"
         )
         header_font_white = Font(bold=True, color="FFFFFF")
 
         row = start_row
-        headers = ["Role", "Name & Signature", "Date Signed", "Signature Hash"]
+        headers = ["Role", "Name", "Date & Time Signed", "Signature Hash", "Signature"]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col, value=header)
             cell.font = header_font_white
             cell.fill = header_fill
+        ws.column_dimensions["B"].width = 22
+        ws.column_dimensions["C"].width = 24
 
-        row += 1
-        ws.cell(row=row, column=1, value="Initiated By:")
-        ws.cell(
-            row=row,
-            column=2,
-            value=self._user_name(getattr(req, "initiator", None)),
-        )
-        ws.cell(
-            row=row,
-            column=3,
-            value=self._format_dt(getattr(req, "initiated_at", None)),
-        )
-        ws.cell(
-            row=row,
-            column=4,
-            value=self._short_hash(req, "initiator_signature_hash", "-"),
-        )
-
-        row += 1
-        if getattr(req, "reviewer", None):
-            ws.cell(row=row, column=1, value="Reviewed By:")
-            ws.cell(
-                row=row,
-                column=2,
-                value=self._user_name(req.reviewer),
-            )
-            ws.cell(
-                row=row,
-                column=3,
-                value=self._format_dt(getattr(req, "reviewed_at", None)),
-            )
-            ws.cell(
-                row=row,
-                column=4,
-                value=self._short_hash(req, "reviewer_signature_hash", "-"),
-            )
+        for sg in self._signers():
             row += 1
+            ws.cell(row=row, column=1, value=sg["role"])
+            ws.cell(row=row, column=2, value=sg["name"])
+            ws.cell(row=row, column=3, value=sg["when"])
+            ws.cell(row=row, column=4, value=sg["hash"])
+            if sg["sig"]:
+                try:
+                    w, h = self._fit(sg["sig"], 140, 50)
+                    img = XLImage(sg["sig"])
+                    img.width, img.height = int(w), int(h)
+                    ws.add_image(img, f"E{row}")
+                    ws.row_dimensions[row].height = max(40, h * 0.78 + 4)
+                except Exception as e:  # pragma: no cover
+                    current_app.logger.warning("Could not add signature image: %s", e)
 
-        approved_logs = self._approved_logs()
-
-        for i in range(1, (req.required_approvals or 0) + 1):
-            approver_log = next(
-                (log for log in approved_logs if log.approval_level == i),
-                None,
-            )
-            ws.cell(row=row, column=1, value=f"Approver {i}:")
-            if approver_log:
-                ws.cell(
-                    row=row,
-                    column=2,
-                    value=self._user_name(
-                        getattr(approver_log, "approver", None), "Pending"
-                    ),
-                )
-                ws.cell(
-                    row=row,
-                    column=3,
-                    value=self._format_dt(
-                        getattr(approver_log, "created_at", None), "Pending"
-                    ),
-                )
-                ws.cell(
-                    row=row,
-                    column=4,
-                    value=self._short_hash(approver_log, "signature_hash", "-"),
-                )
-            else:
-                ws.cell(row=row, column=2, value="Pending")
-                ws.cell(row=row, column=3, value="Pending")
-                ws.cell(row=row, column=4, value="-")
-            row += 1
-
-        # Document security
-        row += 1
+        row += 2
         ws.cell(row=row, column=1, value="DOCUMENT SECURITY").font = Font(
             bold=True, size=12, color=FML_RED_HEX
         )
@@ -1118,8 +1123,25 @@ class RequisitionDocumentGenerator:
             ("Verify at", security["verify_url"]),
         ):
             ws.cell(row=row, column=1, value=label).font = Font(bold=True)
-            ws.cell(row=row, column=2, value=value)
+            cell = ws.cell(row=row, column=2, value=value)
+            if label == "Verify at" and value:
+                cell.hyperlink = value
+                cell.font = Font(color="0563C1", underline="single")
             row += 1
+
+        qr_png = self._qr_png(security["verify_url"])
+        if qr_png:
+            try:
+                qr = XLImage(io.BytesIO(qr_png))
+                qr.width = qr.height = 110
+                ws.add_image(qr, f"A{row + 1}")
+                row += 8
+                link = ws.cell(row=row, column=1, value="Scan or click to verify")
+                link.hyperlink = security["verify_url"]
+                link.font = Font(color="0563C1", underline="single")
+                row += 1
+            except Exception as e:  # pragma: no cover
+                current_app.logger.warning("Could not add QR code: %s", e)
 
         return row
 
@@ -1189,7 +1211,9 @@ class RequisitionDocumentGenerator:
             )
 
         try:
-            verify_url = url_for("requisition.verify", id=req.id, _external=True)
+            verify_url = url_for(
+                "requisition.verify", id=req.id, code=document_code, _external=True
+            )
         except Exception:  # pragma: no cover - fallback URL
             verify_url = f"/verify/{req.id}"
 
