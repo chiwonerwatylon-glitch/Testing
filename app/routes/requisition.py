@@ -350,23 +350,31 @@ def _document_code(
 
 
 @requisition_bp.route("/verify/<int:id>")
-@login_required
-@active_user_required
 def verify(id: int):
-    """Return verification info and document code for a requisition."""
+    """Public verification page opened from the QR code on a printed or downloaded document.
+
+    Details are shown only when the document code in the link matches the
+    requisition as it is now, so an outdated or altered copy fails.
+    """
     requisition = Requisition.query.get_or_404(id)
     approval_logs = (
         ApprovalLog.query.filter_by(requisition_id=id)
         .order_by(ApprovalLog.approval_level)
         .all()
     )
+    current_code = _document_code(requisition, approval_logs)
+    supplied = (request.args.get("code") or "").strip().upper()
+    valid = bool(supplied) and supplied == current_code
 
-    return jsonify(
-        {
-            "requisition_number": requisition.requisition_number,
-            "status": requisition.status,
-            "document_code": _document_code(requisition, approval_logs),
-        }
+    from app.utils.document_generator import RequisitionDocumentGenerator
+
+    signers = RequisitionDocumentGenerator(requisition)._signers() if valid else []
+    return render_template(
+        "requisition/verify.html",
+        requisition=requisition,
+        valid=valid,
+        document_code=current_code,
+        signers=signers,
     )
 
 
