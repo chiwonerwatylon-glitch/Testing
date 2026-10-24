@@ -61,6 +61,60 @@
         </div>
     </div>
 
+    {% if requisition.status == 'approved' %}
+    <div class="card mb-3 shadow-sm {{ 'border-success' if requisition.is_paid else 'border-danger' }}">
+        <div class="card-body">
+            {% if not requisition.is_paid %}
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div><span class="badge bg-danger fs-6">NOT PAID</span>
+                        <span class="ms-2 text-muted">Fully approved. Mark it Paid once the payment has been made.</span></div>
+                    {% if requisition.initiator_id == current_user.id %}
+                    <form method="POST" action="{{ url_for('requisition.mark_paid', id=requisition.id) }}"
+                          onsubmit="return confirm('Mark this requisition as Paid? You cannot undo this yourself; only the admin can set it back after you send a supporting document.')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-cash-coin me-2"></i>Mark as Paid</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% if requisition.unpaid_reason %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong>Set back to Not Paid</strong>{% if requisition.unpaid_by %} by {{ requisition.unpaid_by.full_name }}{% endif %}{% if requisition.unpaid_at %} on {{ requisition.unpaid_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}:
+                    <div style="white-space: pre-line;">{{ requisition.unpaid_reason }}</div>
+                </div>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-success fs-6">PAID</span>
+                <span class="ms-2 text-muted">{% if requisition.paid_at %}Marked paid {{ requisition.paid_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}{% if requisition.paid_by %} by {{ requisition.paid_by.full_name }}{% endif %}. This cannot be reversed unless the payment was rejected and the admin approves a reversal.</span>
+                {% if requisition.reversal_requested_at %}
+                <div class="alert alert-info mt-3 mb-0">
+                    Reversal requested {{ requisition.reversal_requested_at.strftime('%Y-%m-%d %H:%M') }}, waiting for the admin.
+                    <div style="white-space: pre-line;">{{ requisition.reversal_reason }}</div>
+                    {% if current_user.role == 'superuser' %}
+                    <form method="POST" action="{{ url_for('admin.mark_not_paid', id=requisition.id) }}" class="mt-2 d-flex gap-2 flex-wrap">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="text" name="note" class="form-control" style="max-width: 360px;" placeholder="Optional note">
+                        <button class="btn btn-danger">Mark as Not Paid</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% elif requisition.initiator_id == current_user.id %}
+                <details class="mt-3">
+                    <summary class="text-danger" style="cursor: pointer;">Payment was rejected? Request a reversal</summary>
+                    <form method="POST" action="{{ url_for('requisition.request_payment_reversal', id=requisition.id) }}" enctype="multipart/form-data" class="mt-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <label class="form-label">Reason *</label>
+                        <textarea name="reason" class="form-control mb-2" rows="2" required></textarea>
+                        <label class="form-label">Supporting document * (PDF, PNG or JPG)</label>
+                        <input type="file" name="supporting_documents" class="form-control mb-2" accept=".pdf,.png,.jpg,.jpeg" required>
+                        <button class="btn btn-outline-danger">Send to admin</button>
+                    </form>
+                </details>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if requisition.status == 'recalled' and requisition.initiator_id == current_user.id %}
     <div class="alert alert-warning">
         <i class="bi bi-arrow-counterclockwise me-2"></i>You recalled this requisition. It is on hold until you resubmit it.
