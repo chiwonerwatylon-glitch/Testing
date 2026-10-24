@@ -30,6 +30,7 @@ from app.utils.decorators import (
 )
 from app.utils.document_generator import RequisitionDocumentGenerator
 from app.utils.notify import notify, active_users
+from app.utils.supporting_docs import merge_with_documents, save_supporting_documents
 
 requisition_bp = Blueprint("requisition", __name__)
 
@@ -167,6 +168,15 @@ def create():
 
         db.session.add(requisition)
         db.session.flush()  # ensure requisition.id is available
+
+        try:
+            save_supporting_documents(
+                requisition, request.files.getlist("supporting_documents")
+            )
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return redirect(url_for("requisition.create"))
 
         audit = AuditLog(
             user_id=current_user.id,
@@ -621,7 +631,9 @@ def download(id: int, format: str):
     generator = RequisitionDocumentGenerator(requisition)
 
     if format == "pdf":
-        buffer = generator.generate_pdf()
+        buffer = merge_with_documents(
+            generator.generate_pdf(), requisition.documents
+        )
         mimetype, ext = "application/pdf", "pdf"
     elif format == "docx":
         buffer = generator.generate_docx()
@@ -649,6 +661,24 @@ def download(id: int, format: str):
         mimetype=mimetype,
         as_attachment=True,
         download_name=f"{requisition.requisition_number}.{ext}",
+    )
+
+
+@requisition_bp.route("/document/<int:id>")
+@login_required
+@active_user_required
+def document(id: int):
+    """Download a single supporting document."""
+    import io
+
+    from app.models import SupportingDocument
+
+    doc = SupportingDocument.query.get_or_404(id)
+    return send_file(
+        io.BytesIO(doc.data),
+        mimetype=doc.content_type,
+        as_attachment=True,
+        download_name=doc.filename,
     )
 
 
