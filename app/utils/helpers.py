@@ -106,5 +106,6 @@ def get_status_display(status: str) -> str:
         "partially_approved": "Partially Approved",
         "approved": "Approved",
         "rejected": "Rejected",
+        "recalled": "Recalled",
     }
     return displays.get(status, status.title() if isinstance(status, str) else str(status))

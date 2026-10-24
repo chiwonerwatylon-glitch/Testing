@@ -92,7 +92,7 @@ class Requisition(db.Model):
     total_credit = db.Column(db.Float, default=0.0)
 
     # Status tracking
-    # draft, pending_review, pending_approval, partially_approved, approved, rejected
+    # draft, pending_review, pending_approval, partially_approved, approved, rejected, recalled
     status = db.Column(db.String(30), default="draft")
 
     # Workflow tracking
