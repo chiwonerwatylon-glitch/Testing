@@ -97,6 +97,11 @@
                                 <a href="{{ url_for('requisition.detail', id=req.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i>
                                 </a>
+                                {% if req.status == 'rejected' and req.initiator_id == current_user.id %}
+                                <a href="{{ url_for('requisition.edit', id=req.id) }}" class="btn btn-sm btn-warning" title="Correct mistakes">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% else %}

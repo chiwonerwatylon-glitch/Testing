@@ -476,22 +476,45 @@ def accounts_upload():
         flash("Nothing was imported. Fix the file and upload again.", "warning")
         return redirect(url_for("admin.accounts"))
 
-    # The uploaded file becomes the full list used in the drop-downs
-    # (existing requisitions keep their own saved values).
-    removed = AccountEntry.query.delete()
-    for r in rows:
+    mode = request.form.get("mode")
+    if mode not in ("append", "replace"):
+        flash("Choose whether to add to the existing list or replace it.", "warning")
+        return redirect(url_for("admin.accounts"))
+
+    # Existing requisitions keep their own saved values either way.
+    removed = 0
+    if mode == "replace":
+        removed = AccountEntry.query.delete()
+        new_rows = rows
+    else:
+        existing = {
+            (a.account_name, a.account_code, a.location or "")
+            for a in AccountEntry.query.all()
+        }
+        new_rows = [
+            r for r in rows
+            if (r["account_name"], r["account_code"], r["location"]) not in existing
+        ]
+    for r in new_rows:
         db.session.add(AccountEntry(**r))
     db.session.add(
         AuditLog(
             user_id=current_user.id,
             action="upload_accounts",
             entity_type="account_entry",
-            details=f"Uploaded account list: {len(rows)} rows replaced {removed}",
+            details=(
+                f"Uploaded account list ({mode}): {len(new_rows)} rows added"
+                + (f", {removed} old rows removed" if mode == "replace" else "")
+            ),
             ip_address=request.remote_addr,
         )
     )
     db.session.commit()
-    flash(f"Account list replaced: {len(rows)} accounts loaded.", "success")
+    if mode == "replace":
+        flash(f"Account list replaced: {len(new_rows)} accounts loaded.", "success")
+    else:
+        skipped = len(rows) - len(new_rows)
+        flash(f"{len(new_rows)} accounts added, {skipped} already in the list.", "success")
     return redirect(url_for("admin.accounts"))
 
 

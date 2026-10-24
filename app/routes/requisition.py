@@ -841,6 +841,37 @@ def request_payment_reversal(id: int):
     return redirect(url_for("requisition.detail", id=id))
 
 
+@requisition_bp.route("/delete/<int:id>", methods=["POST"])
+@login_required
+@active_user_required
+def delete_rejected(id: int):
+    """Initiator removes a rejected requisition from the system."""
+    from app.models import Notification, BatchItem
+
+    requisition = Requisition.query.get_or_404(id)
+    if requisition.initiator_id != current_user.id or requisition.status != "rejected":
+        flash("Only the initiator can delete a rejected requisition.", "danger")
+        return redirect(url_for("requisition.detail", id=id))
+
+    number = requisition.requisition_number
+    Notification.query.filter_by(requisition_id=id).delete()
+    BatchItem.query.filter_by(requisition_id=id).delete()
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="delete_requisition",
+            entity_type="requisition",
+            entity_id=id,
+            details=f"Rejected requisition {number} deleted by initiator",
+            ip_address=request.remote_addr,
+        )
+    )
+    db.session.delete(requisition)
+    db.session.commit()
+    flash(f"{number} was deleted.", "success")
+    return redirect(url_for("requisition.my_requisitions"))
+
+
 @requisition_bp.route("/edit/<int:id>", methods=["GET", "POST"])
 @login_required
 @active_user_required

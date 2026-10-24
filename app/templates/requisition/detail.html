@@ -21,6 +21,17 @@
             </form>
             {% endif %}
 
+            {% if requisition.initiator_id == current_user.id and requisition.status == 'rejected' %}
+            <a href="{{ url_for('requisition.edit', id=requisition.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil-square me-2"></i>Correct Mistakes
+            </a>
+            <form method="POST" action="{{ url_for('requisition.delete_rejected', id=requisition.id) }}" class="d-inline"
+                  onsubmit="return confirm('Delete this rejected requisition permanently? This cannot be undone.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+            </form>
+            {% endif %}
+
             {% if requisition.status == 'pending_review' and current_user.can_review %}
             <a href="{{ url_for('requisition.review', id=requisition.id) }}" class="btn btn-fml-primary">
                 <i class="bi bi-eye me-2"></i>Review
