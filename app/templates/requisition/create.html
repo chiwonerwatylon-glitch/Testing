@@ -2,6 +2,19 @@
 
 {% block title %}Create Requisition - FML Requisition System{% endblock %}
 
+{% macro acct_cell(field, key, current, required) -%}
+{%- if account_entries -%}
+{%- set vals = account_entries | map(attribute=key) | select | unique | list -%}
+<select class="form-select form-select-sm acct-select" data-key="{{ key }}" name="{{ field }}"{{ ' required' if required }}>
+<option value="">Select</option>
+{%- for v in vals %}<option value="{{ v }}"{{ ' selected' if v == current }}>{{ v }}</option>{% endfor -%}
+{%- if current and current not in vals %}<option value="{{ current }}" selected>{{ current }}</option>{% endif -%}
+</select>
+{%- else -%}
+<input type="text" class="form-control form-control-sm" name="{{ field }}" value="{{ current }}"{{ ' required' if required }}>
+{%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
@@ -145,9 +158,9 @@
                                     <tbody id="itemsTableBody">
 {% for it in (req.items.all() if req else [None]) %}
                                         <tr class="item-row">
-                                            <td><input type="text" class="form-control form-control-sm" name="account_name[]" value="{{ it.account_name if it }}" required></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="account_code[]" value="{{ it.account_code if it }}" required></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="account_location[]" value="{{ (it.account_location or '') if it }}"></td>
+                                            <td>{{ acct_cell("account_name[]", "name", it.account_name if it else "", true) }}</td>
+                                            <td>{{ acct_cell("account_code[]", "code", it.account_code if it else "", true) }}</td>
+                                            <td>{{ acct_cell("account_location[]", "location", (it.account_location or "") if it else "", false) }}</td>
                                             <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB" {{ 'selected' if it and it.account_department == 'EB' }}>EB</option><option value="FIN" {{ 'selected' if it and it.account_department == 'FIN' }}>FIN</option></select></td>
                                             <td><input type="text" class="form-control form-control-sm" name="details[]" value="{{ (it.details or '') if it }}"></td>
                                             <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]" value="{{ it.debit if it and it.debit }}"></td>
@@ -226,13 +239,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const addItemBtn = document.getElementById('addItemBtn');
     const currencySelect = document.getElementById('currency');
     
+    const ACCOUNTS = {{ (account_entries or []) | tojson }};
+    function esc(v) {
+        return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+    function acctCell(field, key, required) {
+        if (!ACCOUNTS.length) {
+            return `<input type="text" class="form-control form-control-sm" name="${field}"${required ? ' required' : ''}>`;
+        }
+        const vals = [...new Set(ACCOUNTS.map(a => a[key]).filter(Boolean))];
+        return `<select class="form-select form-select-sm acct-select" data-key="${key}" name="${field}"${required ? ' required' : ''}><option value="">Select</option>`
+            + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('') + '</select>';
+    }
+    // Choosing an account name fills its code and location from the list.
+    document.getElementById('itemsTableBody').addEventListener('change', function(e) {
+        const sel = e.target.closest('.acct-select');
+        if (!sel || sel.dataset.key !== 'name' || !sel.value) return;
+        const match = ACCOUNTS.filter(a => a.name === sel.value);
+        if (!match.length) return;
+        const row = sel.closest('tr');
+        const setVal = (key, val) => {
+            const el = row.querySelector(`.acct-select[data-key="${key}"]`);
+            if (el && val) el.value = val;
+        };
+        setVal('code', match[0].code);
+        setVal('location', match[0].location);
+    });
+
     function createRow() {
         const row = document.createElement('tr');
         row.className = 'item-row';
         row.innerHTML = `
-            <td><input type="text" class="form-control form-control-sm" name="account_name[]" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="account_code[]" required></td>
-            <td><input type="text" class="form-control form-control-sm" name="account_location[]"></td>
+            <td>${acctCell('account_name[]', 'name', true)}</td>
+            <td>${acctCell('account_code[]', 'code', true)}</td>
+            <td>${acctCell('account_location[]', 'location', false)}</td>
             <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB">EB</option><option value="FIN">FIN</option></select></td>
             <td><input type="text" class="form-control form-control-sm" name="details[]"></td>
             <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]"></td>

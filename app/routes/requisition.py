@@ -217,6 +217,7 @@ def create():
     return render_template(
         "requisition/create.html",
         paying_banks=_paying_banks(),
+        account_entries=_account_entries(),
         reviewers=reviewers,
         approvers=approvers,
         senior_approvers=senior_approvers,
@@ -673,6 +674,17 @@ def _apply_paying_bank(requisition: Requisition, form) -> str | None:
     return None
 
 
+def _account_entries():
+    from app.models import AccountEntry
+
+    return [
+        {"name": a.account_name, "code": a.account_code, "location": a.location or ""}
+        for a in AccountEntry.query.order_by(
+            AccountEntry.account_name, AccountEntry.account_code
+        ).all()
+    ]
+
+
 def _paying_banks():
     from app.models import PayingBank
 
@@ -880,6 +892,7 @@ def edit(id: int):
     return render_template(
         "requisition/create.html",
         paying_banks=_paying_banks(),
+        account_entries=_account_entries(),
         req=requisition,
         reviewers=reviewers,
         approvers=approvers,

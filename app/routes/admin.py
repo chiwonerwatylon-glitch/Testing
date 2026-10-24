@@ -421,3 +421,75 @@ def banks_toggle(id: int):
     )
     db.session.commit()
     return redirect(url_for("admin.banks"))
+
+
+# ---------------------------------------------------------------------------
+# Account list (drop-downs for Account Name, Account Code and Location)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/accounts")
+@login_required
+@superuser_required
+def accounts():
+    from app.models import AccountEntry
+
+    rows = AccountEntry.query.order_by(
+        AccountEntry.account_name, AccountEntry.account_code
+    ).all()
+    return render_template("admin/accounts.html", accounts=rows)
+
+
+@admin_bp.route("/accounts/template")
+@login_required
+@superuser_required
+def accounts_template():
+    from flask import send_file
+
+    from app.utils.account_codes import build_template
+
+    return send_file(
+        build_template(),
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name="accounts_template.xlsx",
+    )
+
+
+@admin_bp.route("/accounts/upload", methods=["POST"])
+@login_required
+@superuser_required
+def accounts_upload():
+    from app.models import AccountEntry
+    from app.utils.account_codes import parse_upload
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        flash("Choose the filled-in Excel template to upload.", "warning")
+        return redirect(url_for("admin.accounts"))
+
+    rows, errors = parse_upload(f)
+    if errors:
+        for e in errors[:10]:
+            flash(e, "danger")
+        flash("Nothing was imported. Fix the file and upload again.", "warning")
+        return redirect(url_for("admin.accounts"))
+
+    # The uploaded file becomes the full list used in the drop-downs
+    # (existing requisitions keep their own saved values).
+    removed = AccountEntry.query.delete()
+    for r in rows:
+        db.session.add(AccountEntry(**r))
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="upload_accounts",
+            entity_type="account_entry",
+            details=f"Uploaded account list: {len(rows)} rows replaced {removed}",
+            ip_address=request.remote_addr,
+        )
+    )
+    db.session.commit()
+    flash(f"Account list replaced: {len(rows)} accounts loaded.", "success")
+    return redirect(url_for("admin.accounts"))

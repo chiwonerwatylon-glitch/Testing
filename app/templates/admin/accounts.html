@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Account List - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="mb-0"><i class="bi bi-list-columns-reverse me-2"></i>Account List</h2>
+        <a href="{{ url_for('admin.accounts_template') }}" class="btn btn-outline-primary">
+            <i class="bi bi-download me-2"></i>Download Excel template
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold">Upload account list</h6>
+            <p class="text-muted small mb-3">
+                Columns, in order: Account Name, Account Code, Location.
+                These fill the Account Name, Account Code and Location drop-downs under Account Details when anyone creates a requisition.
+                Each upload replaces the whole list; existing requisitions are not changed.
+            </p>
+            <form method="POST" action="{{ url_for('admin.accounts_upload') }}" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="file" accept=".xlsx" class="form-control" style="max-width: 360px;" required>
+                <button type="submit" class="btn btn-fml-primary"><i class="bi bi-upload me-2"></i>Upload</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr><th>Account Name</th><th>Account Code</th><th>Location</th></tr>
+                </thead>
+                <tbody>
+                    {% for a in accounts %}
+                    <tr><td>{{ a.account_name }}</td><td>{{ a.account_code }}</td><td>{{ a.location }}</td></tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted py-4">No accounts yet. Download the template, fill it in and upload it. Until then, initiators type these fields by hand.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

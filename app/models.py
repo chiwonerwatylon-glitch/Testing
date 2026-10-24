@@ -238,6 +238,24 @@ class PayingBank(db.Model):
         return f"{self.bank_name} - {self.account_name} - {self.account_number} ({self.currency_code})"
 
 
+class AccountEntry(db.Model):
+    """An account name / code / location the admin makes available in requisition drop-downs."""
+
+    __tablename__ = "account_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_name = db.Column(db.String(200), nullable=False)
+    account_code = db.Column(db.String(50), nullable=False)
+    location = db.Column(db.String(100), nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "account_name", "account_code", "location", name="uq_account_entry"
+        ),
+    )
+
+
 class SupportingDocument(db.Model):
     """Supporting document (PDF or image) stored in the database."""
 
