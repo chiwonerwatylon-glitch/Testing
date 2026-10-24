@@ -28,6 +28,40 @@
                     <form method="POST" id="requisitionForm" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
+                        <!-- Paying Bank -->
+                        {% set cur_pb = req.paying_bank_id|string if req and req.paying_bank_id else ('other' if req and req.paying_bank_name else '') %}
+                        <div class="requisition-section">
+                            <h5 class="section-title"><i class="bi bi-wallet2 me-2"></i>Paying Bank</h5>
+                            <div class="mb-3">
+                                <label for="paying_bank" class="form-label">Bank the payment will be made from *</label>
+                                <select class="form-select" id="paying_bank" name="paying_bank" required>
+                                    <option value="">Select paying bank</option>
+                                    {% for b in paying_banks %}
+                                    <option value="{{ b.id }}" {{ 'selected' if cur_pb == b.id|string }}>{{ b.label }}</option>
+                                    {% endfor %}
+                                    <option value="other" {{ 'selected' if cur_pb == 'other' }}>Other (enter details)</option>
+                                </select>
+                            </div>
+                            <div class="row d-none" id="otherBankFields">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_bank_name">Bank Name *</label>
+                                    <input type="text" class="form-control" id="paying_bank_name" name="paying_bank_name" value="{{ (req.paying_bank_name or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_account_name">Account Name *</label>
+                                    <input type="text" class="form-control" id="paying_account_name" name="paying_account_name" value="{{ (req.paying_account_name or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_account_number">Account Number *</label>
+                                    <input type="text" class="form-control" id="paying_account_number" name="paying_account_number" value="{{ (req.paying_account_number or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_swift_code">SWIFT Code *</label>
+                                    <input type="text" class="form-control" id="paying_swift_code" name="paying_swift_code" value="{{ (req.paying_swift_code or '') if req and cur_pb == 'other' }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Payment Details -->
                         <div class="requisition-section">
                             <h5 class="section-title"><i class="bi bi-bank me-2"></i>Payment Details</h5>
@@ -272,6 +306,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     attachEventListeners();
     calculateTotals();
+
+    const payingBank = document.getElementById('paying_bank');
+    const otherFields = document.getElementById('otherBankFields');
+    function toggleOther() {
+        const other = payingBank.value === 'other';
+        otherFields.classList.toggle('d-none', !other);
+        otherFields.querySelectorAll('input').forEach(i => i.required = other);
+    }
+    payingBank.addEventListener('change', toggleOther);
+    toggleOther();
     
     // Form validation
     document.getElementById('requisitionForm').addEventListener('submit', function(e) {

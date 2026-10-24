@@ -48,6 +48,15 @@ class RequisitionDocumentGenerator:
             current_app.root_path, "static", "images", "logo.png"
         )
 
+    def _paying_bank_text(self) -> str:
+        r = self.requisition
+        if not r.paying_bank_name:
+            return ""
+        parts = [r.paying_bank_name, r.paying_account_name, r.paying_account_number]
+        text = " - ".join(p for p in parts if p)
+        extra = [x for x in (r.paying_currency, r.paying_swift_code and f"SWIFT {r.paying_swift_code}") if x]
+        return f"{text} ({', '.join(extra)})" if extra else text
+
     # ---------------------------------------------------------------------
     # PDF
     # ---------------------------------------------------------------------
@@ -124,6 +133,7 @@ class RequisitionDocumentGenerator:
 
         # Payment details
         payment_data = [
+            ["Paying Bank:", self._paying_bank_text()],
             ["In Favor Of:", self.requisition.in_favor_of],
             ["Bank:", self.requisition.bank_name],
             ["Branch:", self.requisition.branch],
@@ -441,10 +451,11 @@ class RequisitionDocumentGenerator:
         doc.add_paragraph()
 
         # Payment details table
-        payment_table = doc.add_table(rows=6, cols=2)
+        payment_table = doc.add_table(rows=7, cols=2)
         payment_table.style = "Table Grid"
 
         payment_data = [
+            ("Paying Bank:", self._paying_bank_text()),
             ("In Favor Of:", self.requisition.in_favor_of),
             ("Bank:", self.requisition.bank_name),
             ("Branch:", self.requisition.branch),
@@ -605,6 +616,7 @@ class RequisitionDocumentGenerator:
         # Payment details
         row = 5
         payment_data = [
+            ("Paying Bank:", self._paying_bank_text()),
             ("In Favor Of:", self.requisition.in_favor_of),
             ("Bank:", self.requisition.bank_name),
             ("Branch:", self.requisition.branch),
@@ -723,6 +735,7 @@ class RequisitionDocumentGenerator:
         writer.writerow([])
 
         # Payment details
+        writer.writerow(["Paying Bank:", self._paying_bank_text()])
         writer.writerow(["In Favor Of:", self.requisition.in_favor_of])
         writer.writerow(["Bank:", self.requisition.bank_name])
         writer.writerow(["Branch:", self.requisition.branch])
