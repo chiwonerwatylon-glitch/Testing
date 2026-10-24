@@ -200,6 +200,33 @@ class RequisitionItem(db.Model):
         return f"<RequisitionItem {self.account_name}>"
 
 
+class SupportingDocument(db.Model):
+    """Supporting document (PDF or image) stored in the database."""
+
+    __tablename__ = "supporting_documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    requisition_id = db.Column(
+        db.Integer, db.ForeignKey("requisitions.id"), nullable=False, index=True
+    )
+    filename = db.Column(db.String(255), nullable=False)
+    content_type = db.Column(db.String(100), nullable=False)
+    data = db.Column(db.LargeBinary, nullable=False)
+    size = db.Column(db.Integer, default=0)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    requisition = db.relationship(
+        "Requisition",
+        backref=db.backref(
+            "documents",
+            lazy=True,
+            order_by="SupportingDocument.id",
+            cascade="all, delete-orphan",
+        ),
+    )
+
+
 class ApprovalLog(db.Model):
     __tablename__ = "approval_logs"
 

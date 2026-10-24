@@ -19,7 +19,7 @@
                     </div>
                     {% endif %}
 
-                    <form method="POST" id="requisitionForm">
+                    <form method="POST" id="requisitionForm" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <!-- Payment Details -->
@@ -139,6 +139,16 @@
                                 </div>
                             </div>
 
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="form-label fw-bold" for="supporting_documents">
+                                <i class="bi bi-paperclip me-1"></i>Supporting Documents
+                            </label>
+                            <input type="file" class="form-control" id="supporting_documents"
+                                   name="supporting_documents" multiple
+                                   accept=".pdf,.png,.jpg,.jpeg">
+                            <div class="form-text">PDF, PNG or JPG. Attached after the requisition in the merged PDF download. Max 16 MB total.</div>
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
