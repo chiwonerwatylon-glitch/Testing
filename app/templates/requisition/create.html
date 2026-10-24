@@ -8,7 +8,7 @@
         <div class="col-lg-11">
             <div class="card shadow-sm">
                 <div class="card-header bg-fml-primary text-white py-3">
-                    <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Requisition</h4>
+                    <h4 class="mb-0"><i class="bi bi-{{ "pencil-square" if req else "plus-circle" }} me-2"></i>{{ "Edit & Resubmit " ~ req.requisition_number if req else "Create New Requisition" }}</h4>
                 </div>
                 <div class="card-body">
                     {% if not current_user.signature_path %}
@@ -19,9 +19,49 @@
                     </div>
                     {% endif %}
 
+                    {% if req %}
+                    <div class="alert alert-danger">
+                        <strong>Rejected:</strong> {{ req.rejection_reason or 'No reason recorded.' }}
+                    </div>
+                    {% endif %}
+
                     <form method="POST" id="requisitionForm" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
+                        <!-- Paying Bank -->
+                        {% set cur_pb = req.paying_bank_id|string if req and req.paying_bank_id else ('other' if req and req.paying_bank_name else '') %}
+                        <div class="requisition-section">
+                            <h5 class="section-title"><i class="bi bi-wallet2 me-2"></i>Paying Bank</h5>
+                            <div class="mb-3">
+                                <label for="paying_bank" class="form-label">Bank the payment will be made from *</label>
+                                <select class="form-select" id="paying_bank" name="paying_bank" required>
+                                    <option value="">Select paying bank</option>
+                                    {% for b in paying_banks %}
+                                    <option value="{{ b.id }}" {{ 'selected' if cur_pb == b.id|string }}>{{ b.label }}</option>
+                                    {% endfor %}
+                                    <option value="other" {{ 'selected' if cur_pb == 'other' }}>Other (enter details)</option>
+                                </select>
+                            </div>
+                            <div class="row d-none" id="otherBankFields">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_bank_name">Bank Name *</label>
+                                    <input type="text" class="form-control" id="paying_bank_name" name="paying_bank_name" value="{{ (req.paying_bank_name or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_account_name">Account Name *</label>
+                                    <input type="text" class="form-control" id="paying_account_name" name="paying_account_name" value="{{ (req.paying_account_name or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_account_number">Account Number *</label>
+                                    <input type="text" class="form-control" id="paying_account_number" name="paying_account_number" value="{{ (req.paying_account_number or '') if req and cur_pb == 'other' }}">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label" for="paying_swift_code">SWIFT Code *</label>
+                                    <input type="text" class="form-control" id="paying_swift_code" name="paying_swift_code" value="{{ (req.paying_swift_code or '') if req and cur_pb == 'other' }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Payment Details -->
                         <div class="requisition-section">
                             <h5 class="section-title"><i class="bi bi-bank me-2"></i>Payment Details</h5>
@@ -30,15 +70,15 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="in_favor_of" class="form-label">In Favor Of *</label>
                                     <input type="text" class="form-control" id="in_favor_of" name="in_favor_of" 
-                                           value="First Mutual Life" required>
+                                           value="{{ req.in_favor_of if req else 'First Mutual Life' }}" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="currency" class="form-label">Currency *</label>
                                     <select class="form-select" id="currency" name="currency" required>
-                                        <option value="USD" selected>USD - US Dollar</option>
-                                        <option value="ZWG">ZWG - Zimbabwe Gold</option>
-                                        <option value="ZAR">ZAR - South African Rand</option>
-                                        <option value="BWP">BWP - Botswana Pula</option>
+                                        <option value="USD" {{ "selected" if not req or req.currency == "USD" }}>USD - US Dollar</option>
+                                        <option value="ZWG" {{ "selected" if req and req.currency == "ZWG" }}>ZWG - Zimbabwe Gold</option>
+                                        <option value="ZAR" {{ "selected" if req and req.currency == "ZAR" }}>ZAR - South African Rand</option>
+                                        <option value="BWP" {{ "selected" if req and req.currency == "BWP" }}>BWP - Botswana Pula</option>
                                     </select>
                                 </div>
                             </div>
@@ -46,34 +86,34 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="bank_name" class="form-label">Bank Name *</label>
-                                    <input type="text" class="form-control" id="bank_name" name="bank_name" required>
+                                    <input type="text" class="form-control" id="bank_name" name="bank_name" value="{{ req.bank_name if req }}" required>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="branch" class="form-label">Branch *</label>
-                                    <input type="text" class="form-control" id="branch" name="branch" required>
+                                    <input type="text" class="form-control" id="branch" name="branch" value="{{ req.branch if req }}" required>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="account_number" class="form-label">Account Number *</label>
-                                    <input type="text" class="form-control" id="account_number" name="account_number" required>
+                                    <input type="text" class="form-control" id="account_number" name="account_number" value="{{ req.account_number if req }}" required>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="reason_for_payment" class="form-label">Reason for Payment *</label>
                                 <textarea class="form-control" id="reason_for_payment" name="reason_for_payment" 
-                                          rows="3" required></textarea>
+                                          rows="3" required>{{ req.reason_for_payment if req }}</textarea>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">ITF 263 *</label>
                                 <div class="btn-group d-block" role="group">
-                                    <input type="radio" class="btn-check" name="itf_263" id="itf_yes" value="Yes">
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_yes" value="Yes" {{ "checked" if req and req.itf_263 == "Yes" }}>
                                     <label class="btn btn-outline-primary" for="itf_yes">Yes</label>
                                     
-                                    <input type="radio" class="btn-check" name="itf_263" id="itf_no" value="No">
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_no" value="No" {{ "checked" if req and req.itf_263 == "No" }}>
                                     <label class="btn btn-outline-primary" for="itf_no">No</label>
                                     
-                                    <input type="radio" class="btn-check" name="itf_263" id="itf_na" value="NA" checked>
+                                    <input type="radio" class="btn-check" name="itf_263" id="itf_na" value="NA" {{ "checked" if not req or req.itf_263 not in ["Yes","No"] }}>
                                     <label class="btn btn-outline-primary" for="itf_na">N/A</label>
                                 </div>
                             </div>
@@ -103,20 +143,22 @@
                                         </tr>
                                     </thead>
                                     <tbody id="itemsTableBody">
+{% for it in (req.items.all() if req else [None]) %}
                                         <tr class="item-row">
-                                            <td><input type="text" class="form-control form-control-sm" name="account_name[]" required></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="account_code[]" required></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="account_location[]"></td>
-                                            <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB">EB</option><option value="FIN">FIN</option></select></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="details[]"></td>
-                                            <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]"></td>
-                                            <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_name[]" value="{{ it.account_name if it }}" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_code[]" value="{{ it.account_code if it }}" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="account_location[]" value="{{ (it.account_location or '') if it }}"></td>
+                                            <td><select class="form-select form-select-sm" name="account_department[]" required><option value="">Select</option><option value="EB" {{ 'selected' if it and it.account_department == 'EB' }}>EB</option><option value="FIN" {{ 'selected' if it and it.account_department == 'FIN' }}>FIN</option></select></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="details[]" value="{{ (it.details or '') if it }}"></td>
+                                            <td><input type="number" step="0.01" class="form-control form-control-sm debit-input" name="debit[]" value="{{ it.debit if it and it.debit }}"></td>
+                                            <td><input type="number" step="0.01" class="form-control form-control-sm credit-input" name="credit[]" value="{{ it.credit if it and it.credit }}"></td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </td>
                                         </tr>
+{% endfor %}
                                     </tbody>
                                     <tfoot>
                                         <tr class="table-light fw-bold">
@@ -148,6 +190,16 @@
                             <input type="file" class="form-control" id="supporting_documents"
                                    name="supporting_documents" multiple
                                    accept=".pdf,.png,.jpg,.jpeg">
+                            {% if req and req.documents %}
+                            <div class="mt-2">
+                                {% for d in req.documents %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="remove_document" value="{{ d.id }}" id="rm{{ d.id }}">
+                                    <label class="form-check-label" for="rm{{ d.id }}">Remove {{ d.filename }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                             <div class="form-text">PDF, PNG or JPG. Attached after the requisition in the merged PDF download. Max 16 MB total.</div>
                         </div>
                         
@@ -156,7 +208,7 @@
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-fml-primary" {{ 'disabled' if not current_user.signature_path }}>
-                                <i class="bi bi-send me-2"></i>Submit Requisition
+                                <i class="bi bi-send me-2"></i>{{ "Resubmit Requisition" if req else "Submit Requisition" }}
                             </button>
                         </div>
                     </form>
@@ -254,6 +306,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     attachEventListeners();
     calculateTotals();
+
+    const payingBank = document.getElementById('paying_bank');
+    const otherFields = document.getElementById('otherBankFields');
+    function toggleOther() {
+        const other = payingBank.value === 'other';
+        otherFields.classList.toggle('d-none', !other);
+        otherFields.querySelectorAll('input').forEach(i => i.required = other);
+    }
+    payingBank.addEventListener('change', toggleOther);
+    toggleOther();
     
     // Form validation
     document.getElementById('requisitionForm').addEventListener('submit', function(e) {

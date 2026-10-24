@@ -177,6 +177,16 @@
 
             <li class="nav-item">
                 <a
+                    class="nav-link sidebar-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.banks') }}"
+                    href="{{ url_for('admin.banks') }}"
+                >
+                    <i class="bi bi-bank me-2"></i>
+                    Paying banks
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a
                     class="nav-link sidebar-link {{ 'active' if request.endpoint == 'admin.audit_logs' }}"
                     href="{{ url_for('admin.audit_logs') }}"
                 >

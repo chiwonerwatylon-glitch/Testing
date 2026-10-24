@@ -37,8 +37,24 @@ def net_amount(requisition) -> Decimal:
     return money(credit - debit)
 
 
+def stanbic_bank_match(requisition):
+    """(code, branch) of the receiving bank when paying from Stanbic, else None."""
+    from app.utils.bank_codes import is_stanbic, lookup_bank_code
+
+    if not is_stanbic(getattr(requisition, "paying_bank_name", None)):
+        return None
+    return lookup_bank_code(requisition.bank_name)
+
+
 def payment_code(requisition) -> str:
-    """'Code' column: the account code of the first line item on the requisition."""
+    """'Code' column.
+
+    Paying from Stanbic: the receiving bank's Stanbic code. Otherwise (or if the
+    bank is not in the list): the account code of the first line item.
+    """
+    match = stanbic_bank_match(requisition)
+    if match:
+        return match[0]
     first = requisition.items.first()
     return first.account_code if first else ""
 
@@ -79,7 +95,7 @@ def batch_row(requisition, reference: str, account_name: str, code: str) -> List
         net_amount(requisition),                           # Amount, credit minus debit, 2 dp
         reference or requisition.requisition_number,       # Reference
         requisition.currency or "",                        # Currency Code
-        requisition.branch or "",                          # Branch Name
+        (stanbic_bank_match(requisition) or (None, requisition.branch))[1] or "",  # Branch Name
     ]
 
 

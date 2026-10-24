@@ -319,3 +319,105 @@ def audit_logs():
         selected_user_id=user_id,
         action_filter=action_filter,
     )
+
+
+# ---------------------------------------------------------------------------
+# Paying banks (the bank accounts initiators choose to pay from)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/banks")
+@login_required
+@superuser_required
+def banks():
+    from app.models import PayingBank
+
+    rows = PayingBank.query.order_by(
+        PayingBank.bank_name, PayingBank.account_number
+    ).all()
+    return render_template("admin/banks.html", banks=rows)
+
+
+@admin_bp.route("/banks/template")
+@login_required
+@superuser_required
+def banks_template():
+    from flask import send_file
+
+    from app.utils.paying_banks import build_template
+
+    return send_file(
+        build_template(),
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        as_attachment=True,
+        download_name="paying_banks_template.xlsx",
+    )
+
+
+@admin_bp.route("/banks/upload", methods=["POST"])
+@login_required
+@superuser_required
+def banks_upload():
+    from app.models import PayingBank
+    from app.utils.paying_banks import parse_upload
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        flash("Choose the filled-in Excel template to upload.", "warning")
+        return redirect(url_for("admin.banks"))
+
+    rows, errors = parse_upload(f)
+    if errors:
+        for e in errors[:10]:
+            flash(e, "danger")
+        flash("Nothing was imported. Fix the file and upload again.", "warning")
+        return redirect(url_for("admin.banks"))
+
+    added = updated = 0
+    for r in rows:
+        bank = PayingBank.query.filter_by(
+            bank_name=r["bank_name"], account_number=r["account_number"]
+        ).first()
+        if bank:
+            bank.account_name = r["account_name"]
+            bank.currency_code = r["currency_code"]
+            bank.is_active = True
+            updated += 1
+        else:
+            db.session.add(PayingBank(**r))
+            added += 1
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="upload_paying_banks",
+            entity_type="paying_bank",
+            details=f"Uploaded paying banks: {added} added, {updated} updated",
+            ip_address=request.remote_addr,
+        )
+    )
+    db.session.commit()
+    flash(f"Paying banks imported: {added} added, {updated} updated.", "success")
+    return redirect(url_for("admin.banks"))
+
+
+@admin_bp.route("/banks/<int:id>/toggle", methods=["POST"])
+@login_required
+@superuser_required
+def banks_toggle(id: int):
+    from app.models import PayingBank
+
+    bank = PayingBank.query.get_or_404(id)
+    bank.is_active = not bank.is_active
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="toggle_paying_bank",
+            entity_type="paying_bank",
+            entity_id=bank.id,
+            details=f"{bank.label} {'enabled' if bank.is_active else 'disabled'}",
+            ip_address=request.remote_addr,
+        )
+    )
+    db.session.commit()
+    return redirect(url_for("admin.banks"))

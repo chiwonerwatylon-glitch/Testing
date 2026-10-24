@@ -92,7 +92,7 @@ class Requisition(db.Model):
     total_credit = db.Column(db.Float, default=0.0)
 
     # Status tracking
-    # draft, pending_review, pending_approval, partially_approved, approved, rejected
+    # draft, pending_review, pending_approval, partially_approved, approved, rejected, recalled
     status = db.Column(db.String(30), default="draft")
 
     # Workflow tracking
@@ -107,6 +107,20 @@ class Requisition(db.Model):
     reviewer_signature = db.Column(db.String(255))
     review_comments = db.Column(db.Text)
 
+    # Paying bank (the bank the payment is made from); snapshot at submission
+    paying_bank_id = db.Column(db.Integer, db.ForeignKey("paying_banks.id"))
+    paying_bank_name = db.Column(db.String(100))
+    paying_account_name = db.Column(db.String(150))
+    paying_account_number = db.Column(db.String(50))
+    paying_currency = db.Column(db.String(10))
+    paying_swift_code = db.Column(db.String(20))
+
+    # Rejection / resubmission
+    rejection_reason = db.Column(db.Text)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    rejected_at = db.Column(db.DateTime)
+    resubmit_count = db.Column(db.Integer, default=0)
+
     required_approvals = db.Column(db.Integer, default=2)
     current_approvals = db.Column(db.Integer, default=0)
 
@@ -117,6 +131,7 @@ class Requisition(db.Model):
     completed_at = db.Column(db.DateTime)
 
     # Relationships
+    rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
     items = db.relationship(
         "RequisitionItem",
         backref="requisition",
@@ -198,6 +213,29 @@ class RequisitionItem(db.Model):
 
     def __repr__(self) -> str:
         return f"<RequisitionItem {self.account_name}>"
+
+
+class PayingBank(db.Model):
+    """A bank account the company pays from. Managed by the admin."""
+
+    __tablename__ = "paying_banks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    bank_name = db.Column(db.String(100), nullable=False)
+    account_name = db.Column(db.String(150), nullable=False)
+    account_number = db.Column(db.String(50), nullable=False)
+    currency_code = db.Column(db.String(10), nullable=False)
+    swift_code = db.Column(db.String(20))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("bank_name", "account_number", name="uq_paying_bank_account"),
+    )
+
+    @property
+    def label(self) -> str:
+        return f"{self.bank_name} - {self.account_name} - {self.account_number} ({self.currency_code})"
 
 
 class SupportingDocument(db.Model):

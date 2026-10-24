@@ -8,7 +8,7 @@ Requisition: holds payee (in favor of), bank, branch, account number, reason for
 Workflow:
 1. An initiator creates a requisition; it goes to pending_review.
 2. A reviewer approves it (status pending_approval) or rejects it (rejected).
-3. Approvers approve in sequence. After the first approval the status is partially_approved; when all required approvals are done it is approved. Any rejection sets it to rejected.
+3. Approvers approve in sequence. After the first approval the status is partially_approved; when all required approvals are done it is approved. Any rejection requires a reason, sets it to rejected and returns it to the initiator, who can edit and resubmit it (it goes back to pending_review and the approvals restart).
 
 Statuses: draft, pending_review, pending_approval, partially_approved, approved, rejected.
 
