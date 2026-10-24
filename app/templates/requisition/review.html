@@ -80,7 +80,7 @@
                         <div class="mb-3">
                             <label for="comments" class="form-label">Review Comments</label>
                             <textarea class="form-control" id="comments" name="comments" rows="3" 
-                                      placeholder="Add any comments regarding your review..."></textarea>
+                                      placeholder="Add any comments regarding your review... A reason is required if you reject."></textarea>
                         </div>
                         
                         <div class="alert alert-info">
@@ -91,7 +91,7 @@
                         
                         <div class="d-flex justify-content-between">
                             <button type="submit" name="action" value="reject" class="btn btn-danger"
-                                    onclick="return confirm('Are you sure you want to reject this requisition?')">
+                                    onclick="if(!document.getElementById('comments').value.trim()){alert('Please enter the reason for rejection in the comments box.');return false;} return confirm('Reject and return this requisition to the initiator?')">
                                 <i class="bi bi-x-circle me-2"></i>Reject
                             </button>
                             <button type="submit" name="action" value="approve" class="btn btn-fml-primary">

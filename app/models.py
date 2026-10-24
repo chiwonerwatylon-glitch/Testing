@@ -107,6 +107,12 @@ class Requisition(db.Model):
     reviewer_signature = db.Column(db.String(255))
     review_comments = db.Column(db.Text)
 
+    # Rejection / resubmission
+    rejection_reason = db.Column(db.Text)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    rejected_at = db.Column(db.DateTime)
+    resubmit_count = db.Column(db.Integer, default=0)
+
     required_approvals = db.Column(db.Integer, default=2)
     current_approvals = db.Column(db.Integer, default=0)
 
@@ -117,6 +123,7 @@ class Requisition(db.Model):
     completed_at = db.Column(db.DateTime)
 
     # Relationships
+    rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
     items = db.relationship(
         "RequisitionItem",
         backref="requisition",

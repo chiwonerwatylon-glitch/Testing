@@ -439,7 +439,11 @@ def review(id: int):
 
     if request.method == "POST":
         action = request.form.get("action")
-        comments = request.form.get("comments", "")
+        comments = request.form.get("comments", "").strip()
+
+        if action == "reject" and not comments:
+            flash("Please give a reason for rejecting this requisition.", "warning")
+            return redirect(url_for("requisition.review", id=id))
 
         requisition.reviewer_id = current_user.id
         requisition.reviewed_at = datetime.utcnow()
@@ -467,12 +471,13 @@ def review(id: int):
                 "update",
             )
         else:
-            requisition.status = "rejected"
-            flash("Requisition has been rejected.", "info")
+            _mark_rejected(requisition, comments)
+            flash("Requisition rejected and returned to the initiator.", "info")
 
             notify(
                 [requisition.initiator],
-                f"{requisition.requisition_number} was rejected at review.",
+                f"{requisition.requisition_number} was rejected at review "
+                f"and returned for corrections: {comments}",
                 requisition,
                 "rejected",
             )
@@ -535,7 +540,11 @@ def approve(id: int):
 
     if request.method == "POST":
         action = request.form.get("action")
-        comments = request.form.get("comments", "")
+        comments = request.form.get("comments", "").strip()
+
+        if action == "rejected" and not comments:
+            flash("Please give a reason for rejecting this requisition.", "warning")
+            return redirect(url_for("requisition.approve", id=id))
 
         approval_log = ApprovalLog(
             requisition_id=id,
@@ -561,8 +570,8 @@ def approve(id: int):
                     "success",
                 )
         else:
-            requisition.status = "rejected"
-            flash("Requisition has been rejected.", "info")
+            _mark_rejected(requisition, comments)
+            flash("Requisition rejected and returned to the initiator.", "info")
 
         audit = AuditLog(
             user_id=current_user.id,
@@ -603,7 +612,8 @@ def approve(id: int):
         else:
             notify(
                 [requisition.initiator],
-                f"{requisition.requisition_number} was rejected at approval.",
+                f"{requisition.requisition_number} was rejected at approval "
+                f"and returned for corrections: {comments}",
                 requisition,
                 "rejected",
             )
@@ -615,6 +625,150 @@ def approve(id: int):
         "requisition/approve.html",
         requisition=requisition,
         approval_level=next_level,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Rejection and resubmission
+# ---------------------------------------------------------------------------
+
+def _mark_rejected(requisition: Requisition, reason: str) -> None:
+    requisition.status = "rejected"
+    requisition.rejection_reason = reason
+    requisition.rejected_by_id = current_user.id
+    requisition.rejected_at = datetime.utcnow()
+
+
+@requisition_bp.route("/edit/<int:id>", methods=["GET", "POST"])
+@login_required
+@active_user_required
+def edit(id: int):
+    """Let the initiator correct a rejected requisition and resubmit it."""
+    requisition = Requisition.query.get_or_404(id)
+
+    if requisition.initiator_id != current_user.id:
+        flash("Only the initiator can edit and resubmit this requisition.", "danger")
+        return redirect(url_for("requisition.detail", id=id))
+    if requisition.status != "rejected":
+        flash("Only rejected requisitions can be edited.", "warning")
+        return redirect(url_for("requisition.detail", id=id))
+
+    if request.method == "POST":
+        if not current_user.signature_path:
+            flash("You must upload your signature before resubmitting.", "warning")
+            return redirect(url_for("auth.profile"))
+
+        f = request.form
+        requisition.in_favor_of = f.get("in_favor_of")
+        requisition.bank_name = f.get("bank_name")
+        requisition.branch = f.get("branch")
+        requisition.account_number = f.get("account_number")
+        requisition.reason_for_payment = f.get("reason_for_payment")
+        requisition.itf_263 = f.get("itf_263", "NA")
+        requisition.currency = f.get("currency", "USD")
+
+        for old in requisition.items.all():
+            db.session.delete(old)
+        db.session.flush()
+
+        names = f.getlist("account_name[]")
+        codes = f.getlist("account_code[]")
+        locs = f.getlist("account_location[]")
+        depts = f.getlist("account_department[]")
+        details = f.getlist("details[]")
+        debits = f.getlist("debit[]")
+        credits = f.getlist("credit[]")
+        total_debit = total_credit = 0.0
+        for i in range(len(names)):
+            if not (names[i] and codes[i]):
+                continue
+            debit = float(debits[i]) if debits[i] else 0.0
+            credit = float(credits[i]) if credits[i] else 0.0
+            db.session.add(
+                RequisitionItem(
+                    requisition_id=requisition.id,
+                    account_name=names[i],
+                    account_code=codes[i],
+                    account_location=locs[i] if i < len(locs) else "",
+                    account_department=depts[i] if i < len(depts) else "",
+                    details=details[i] if i < len(details) else "",
+                    debit=debit,
+                    credit=credit,
+                )
+            )
+            total_debit += debit
+            total_credit += credit
+        requisition.total_debit = total_debit
+        requisition.total_credit = total_credit
+        requisition.required_approvals = requisition.calculate_required_approvals()
+
+        # Documents: drop the ones ticked for removal, add new uploads
+        remove_ids = {int(x) for x in f.getlist("remove_document") if x.isdigit()}
+        for doc in [d for d in requisition.documents]:
+            if doc.id in remove_ids:
+                requisition.documents.remove(doc)
+        try:
+            save_supporting_documents(
+                requisition, request.files.getlist("supporting_documents")
+            )
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return redirect(url_for("requisition.edit", id=id))
+
+        # Restart the workflow; keep earlier approval history but void it
+        for log in ApprovalLog.query.filter_by(requisition_id=id).all():
+            if log.action == "approved":
+                log.action = "voided"
+            elif log.action == "rejected":
+                log.action = "returned"
+        requisition.current_approvals = 0
+        requisition.reviewer_id = None
+        requisition.reviewed_at = None
+        requisition.reviewer_signature = None
+        requisition.review_comments = None
+        requisition.initiator_signature = current_user.signature_path
+        requisition.initiated_at = datetime.utcnow()
+        requisition.completed_at = None
+        requisition.resubmit_count = (requisition.resubmit_count or 0) + 1
+        requisition.status = "pending_review"
+
+        db.session.add(
+            AuditLog(
+                user_id=current_user.id,
+                action="resubmit_requisition",
+                entity_type="requisition",
+                entity_id=requisition.id,
+                details=(
+                    f"Resubmitted {requisition.requisition_number} after rejection: "
+                    f"{requisition.rejection_reason}"
+                ),
+                ip_address=request.remote_addr,
+            )
+        )
+        notify(
+            active_users(can_review=True),
+            f"{requisition.requisition_number} was corrected by "
+            f"{current_user.full_name} and resubmitted for review.",
+            requisition,
+            "pending",
+            exclude_id=current_user.id,
+        )
+        db.session.commit()
+        flash("Requisition resubmitted for review.", "success")
+        return redirect(url_for("requisition.detail", id=id))
+
+    reviewers = User.query.filter_by(can_review=True, is_active=True).all()
+    approvers = User.query.filter_by(can_approve=True, is_active=True).all()
+    senior_approvers = User.query.filter_by(
+        is_senior_approver=True, is_active=True
+    ).all()
+    return render_template(
+        "requisition/create.html",
+        req=requisition,
+        reviewers=reviewers,
+        approvers=approvers,
+        senior_approvers=senior_approvers,
     )
 
 
