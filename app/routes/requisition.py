@@ -159,7 +159,10 @@ def create():
                 account_department=account_departments[i]
                 if i < len(account_departments)
                 else "",
-                details=details_list[i] if i < len(details_list) else "",
+                details=_item_detail(
+                    details_list[i] if i < len(details_list) else "",
+                    requisition.reason_for_payment,
+                ),
                 debit=debit,
                 credit=credit,
             )
@@ -371,8 +374,18 @@ def verify(id: int):
 @login_required
 @active_user_required
 def print_view(id: int):
-    """Print-friendly view, including QR code for verification URL."""
+    """Print view: the same PDF as the download (with supporting documents), opened inline."""
     requisition = Requisition.query.get_or_404(id)
+    generator = RequisitionDocumentGenerator(requisition)
+    buffer = merge_with_documents(generator.generate_pdf(), requisition.documents)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"{requisition.requisition_number}.pdf",
+    )
+
+    # Legacy HTML print page (no longer used)
     approval_logs = (
         ApprovalLog.query.filter_by(requisition_id=id)
         .order_by(ApprovalLog.approval_level)
@@ -695,6 +708,15 @@ def _paying_banks():
     )
 
 
+DETAIL_MAX = 35
+
+
+def _item_detail(value, reason) -> str:
+    """Line-item Details: what was typed, else the Reason for Payment; max 35 characters."""
+    text = " ".join(str(value or "").split()) or " ".join(str(reason or "").split())
+    return text[:DETAIL_MAX]
+
+
 def _mark_rejected(requisition: Requisition, reason: str) -> None:
     requisition.status = "rejected"
     requisition.rejection_reason = reason
@@ -931,7 +953,10 @@ def edit(id: int):
                     account_code=codes[i],
                     account_location=locs[i] if i < len(locs) else "",
                     account_department=depts[i] if i < len(depts) else "",
-                    details=details[i] if i < len(details) else "",
+                    details=_item_detail(
+                        details[i] if i < len(details) else "",
+                        requisition.reason_for_payment,
+                    ),
                     debit=debit,
                     credit=credit,
                 )
