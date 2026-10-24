@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Reversals - FML Requisition System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4"><i class="bi bi-arrow-counterclockwise me-2"></i>Payment Reversals</h2>
+    <p class="text-muted">Initiators who marked a requisition Paid but whose payment was rejected. Open the requisition to read the supporting document, then set it back to Not Paid.</p>
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr><th>Requisition</th><th>Initiator</th><th>Requested</th><th>Reason</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for r in requisitions %}
+                    <tr>
+                        <td><a href="{{ url_for('requisition.detail', id=r.id) }}">{{ r.requisition_number }}</a></td>
+                        <td>{{ r.initiator.full_name }}</td>
+                        <td>{{ r.reversal_requested_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td style="white-space: pre-line;">{{ r.reversal_reason }}</td>
+                        <td class="text-end">
+                            <form method="POST" action="{{ url_for('admin.mark_not_paid', id=r.id) }}" class="d-flex gap-2 justify-content-end">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="note" class="form-control form-control-sm" placeholder="Optional note" style="max-width: 200px;">
+                                <button class="btn btn-sm btn-danger">Mark Not Paid</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No reversal requests.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

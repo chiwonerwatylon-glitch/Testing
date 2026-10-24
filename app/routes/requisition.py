@@ -754,6 +754,93 @@ def recall(id: int):
     return redirect(url_for("requisition.edit", id=id))
 
 
+@requisition_bp.route("/mark-paid/<int:id>", methods=["POST"])
+@login_required
+@active_user_required
+def mark_paid(id: int):
+    """Initiator marks a fully approved requisition as Paid. Cannot be undone directly."""
+    requisition = Requisition.query.get_or_404(id)
+
+    if requisition.initiator_id != current_user.id:
+        flash("Only the initiator can mark this requisition as paid.", "danger")
+    elif requisition.status != "approved":
+        flash("Only a fully approved requisition can be marked as paid.", "warning")
+    elif requisition.is_paid:
+        flash("This requisition is already marked as paid.", "info")
+    else:
+        requisition.payment_status = "paid"
+        requisition.paid_at = datetime.utcnow()
+        requisition.paid_by_id = current_user.id
+        requisition.reversal_reason = None
+        requisition.reversal_requested_at = None
+        db.session.add(
+            AuditLog(
+                user_id=current_user.id,
+                action="mark_paid",
+                entity_type="requisition",
+                entity_id=requisition.id,
+                details=f"{requisition.requisition_number} marked Paid",
+                ip_address=request.remote_addr,
+            )
+        )
+        db.session.commit()
+        flash("Requisition marked as Paid.", "success")
+    return redirect(url_for("requisition.detail", id=id))
+
+
+@requisition_bp.route("/payment-reversal/<int:id>", methods=["POST"])
+@login_required
+@active_user_required
+def request_payment_reversal(id: int):
+    """Initiator asks the admin to set a Paid requisition back to Not Paid."""
+    requisition = Requisition.query.get_or_404(id)
+
+    if requisition.initiator_id != current_user.id or not requisition.is_paid:
+        flash("A reversal can only be requested by the initiator of a paid requisition.", "danger")
+        return redirect(url_for("requisition.detail", id=id))
+    if requisition.reversal_requested_at:
+        flash("A reversal request is already waiting for the admin.", "info")
+        return redirect(url_for("requisition.detail", id=id))
+
+    reason = (request.form.get("reason") or "").strip()
+    files = [f for f in request.files.getlist("supporting_documents") if f and f.filename]
+    if not reason:
+        flash("Explain why the payment did not go through.", "warning")
+        return redirect(url_for("requisition.detail", id=id))
+    if not files:
+        flash("Attach a supporting document (for example the bank's rejection notice).", "warning")
+        return redirect(url_for("requisition.detail", id=id))
+    try:
+        save_supporting_documents(requisition, files)
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "danger")
+        return redirect(url_for("requisition.detail", id=id))
+
+    requisition.reversal_reason = reason
+    requisition.reversal_requested_at = datetime.utcnow()
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="request_payment_reversal",
+            entity_type="requisition",
+            entity_id=requisition.id,
+            details=f"Reversal of Paid requested for {requisition.requisition_number}: {reason[:200]}",
+            ip_address=request.remote_addr,
+        )
+    )
+    notify(
+        active_users(role="superuser"),
+        f"{current_user.full_name} asked to set {requisition.requisition_number} back to Not Paid.",
+        requisition,
+        "pending",
+        exclude_id=current_user.id,
+    )
+    db.session.commit()
+    flash("Reversal request sent to the admin with your supporting document.", "success")
+    return redirect(url_for("requisition.detail", id=id))
+
+
 @requisition_bp.route("/edit/<int:id>", methods=["GET", "POST"])
 @login_required
 @active_user_required

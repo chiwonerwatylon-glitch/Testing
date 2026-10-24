@@ -235,6 +235,14 @@ def _ensure_rejection_columns(inspector) -> None:
         "paying_account_number": "VARCHAR(50)",
         "paying_currency": "VARCHAR(10)",
         "paying_swift_code": "VARCHAR(20)",
+        "payment_status": "VARCHAR(20) DEFAULT 'not_paid'",
+        "paid_at": "TIMESTAMP",
+        "paid_by_id": "INTEGER",
+        "reversal_reason": "TEXT",
+        "reversal_requested_at": "TIMESTAMP",
+        "unpaid_reason": "TEXT",
+        "unpaid_at": "TIMESTAMP",
+        "unpaid_by_id": "INTEGER",
     }
     with db.engine.begin() as conn:
         for name, ddl in wanted.items():

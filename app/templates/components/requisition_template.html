@@ -49,6 +49,24 @@
         </div>
     </div>
 
+    {% if requisition.status == 'approved' %}
+    <div class="text-center mb-3">
+        <span class="pay-stamp {{ 'pay-stamp-paid' if requisition.is_paid else 'pay-stamp-unpaid' }}">
+            {{ 'PAID' if requisition.is_paid else 'NOT PAID' }}
+        </span>
+        {% if requisition.is_paid and requisition.paid_at %}
+        <div class="small text-muted mt-1">Paid {{ requisition.paid_at.strftime('%d %b %Y') }}{% if requisition.paid_by %} by {{ requisition.paid_by.full_name }}{% endif %}</div>
+        {% elif requisition.unpaid_reason %}
+        <div class="small mt-1"><strong>Set back to Not Paid{% if requisition.unpaid_at %} on {{ requisition.unpaid_at.strftime('%d %b %Y') }}{% endif %}:</strong> {{ requisition.unpaid_reason }}</div>
+        {% endif %}
+    </div>
+    <style>
+        .pay-stamp { display: inline-block; padding: .2rem 1.2rem; border: 4px solid; border-radius: .5rem; font-size: 1.8rem; font-weight: 800; letter-spacing: .15em; transform: rotate(-6deg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .pay-stamp-unpaid { color: #dc3545; border-color: #dc3545; }
+        .pay-stamp-paid { color: #198754; border-color: #198754; }
+    </style>
+    {% endif %}
+
     <hr class="req-doc-divider">
 
     {# ============ PAYING BANK ============ #}

@@ -130,7 +130,31 @@ class Requisition(db.Model):
     )
     completed_at = db.Column(db.DateTime)
 
+    # Payment tracking (applies once the requisition is fully approved).
+    # NULL is treated as "not_paid" so older approved requisitions get the stamp.
+    payment_status = db.Column(db.String(20), default="not_paid")  # not_paid, paid
+    paid_at = db.Column(db.DateTime)
+    paid_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # Initiator's request to undo "Paid" (supporting document is attached to the requisition)
+    reversal_reason = db.Column(db.Text)
+    reversal_requested_at = db.Column(db.DateTime)
+    # Admin's record of why it was set back to Not Paid
+    unpaid_reason = db.Column(db.Text)
+    unpaid_at = db.Column(db.DateTime)
+    unpaid_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+
     # Relationships
+    paid_by = db.relationship("User", foreign_keys=[paid_by_id])
+    unpaid_by = db.relationship("User", foreign_keys=[unpaid_by_id])
+
+    @property
+    def is_paid(self) -> bool:
+        return self.payment_status == "paid"
+
+    @property
+    def awaiting_payment_stamp(self) -> bool:
+        """Fully approved and not yet paid: shows the red NOT PAID stamp."""
+        return self.status == "approved" and not self.is_paid
     rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
     items = db.relationship(
         "RequisitionItem",

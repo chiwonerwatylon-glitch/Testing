@@ -493,3 +493,70 @@ def accounts_upload():
     db.session.commit()
     flash(f"Account list replaced: {len(rows)} accounts loaded.", "success")
     return redirect(url_for("admin.accounts"))
+
+
+# ---------------------------------------------------------------------------
+# Payment reversals (initiator asked for a Paid requisition to go back to Not Paid)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/payment-reversals")
+@login_required
+@superuser_required
+def payment_reversals():
+    from app.models import Requisition
+
+    rows = (
+        Requisition.query.filter(
+            Requisition.payment_status == "paid",
+            Requisition.reversal_requested_at.isnot(None),
+        )
+        .order_by(Requisition.reversal_requested_at)
+        .all()
+    )
+    return render_template("admin/payment_reversals.html", requisitions=rows)
+
+
+@admin_bp.route("/payment-reversals/<int:id>/mark-not-paid", methods=["POST"])
+@login_required
+@superuser_required
+def mark_not_paid(id: int):
+    from datetime import datetime
+
+    from app.models import Requisition
+    from app.utils.notify import notify
+
+    requisition = Requisition.query.get_or_404(id)
+    if not (requisition.is_paid and requisition.reversal_requested_at):
+        flash("There is no pending reversal request for this requisition.", "warning")
+        return redirect(url_for("admin.payment_reversals"))
+
+    note = (request.form.get("note") or "").strip()
+    reason = requisition.reversal_reason or ""
+    if note:
+        reason = f"{reason}\nAdmin note: {note}".strip()
+    requisition.payment_status = "not_paid"
+    requisition.unpaid_reason = reason
+    requisition.unpaid_at = datetime.utcnow()
+    requisition.unpaid_by_id = current_user.id
+    requisition.reversal_reason = None
+    requisition.reversal_requested_at = None
+    db.session.add(
+        AuditLog(
+            user_id=current_user.id,
+            action="mark_not_paid",
+            entity_type="requisition",
+            entity_id=requisition.id,
+            details=f"{requisition.requisition_number} set back to Not Paid: {reason[:200]}",
+            ip_address=request.remote_addr,
+        )
+    )
+    notify(
+        [requisition.initiator],
+        f"{requisition.requisition_number} was set back to Not Paid. Mark it Paid again once it has been paid.",
+        requisition,
+        "update",
+        exclude_id=current_user.id,
+    )
+    db.session.commit()
+    flash(f"{requisition.requisition_number} set back to Not Paid.", "success")
+    return redirect(url_for("admin.payment_reversals"))
