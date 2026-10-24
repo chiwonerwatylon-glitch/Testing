@@ -217,6 +217,27 @@ def seed_superuser(app: Flask) -> None:
         app.logger.info("Created superuser: %s", email)
 
 
+def _ensure_rejection_columns(inspector) -> None:
+    """Add rejection/resubmission columns to older requisitions tables."""
+    from sqlalchemy import text
+
+    if "requisitions" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("requisitions")}
+    wanted = {
+        "rejection_reason": "TEXT",
+        "rejected_by_id": "INTEGER",
+        "rejected_at": "TIMESTAMP",
+        "resubmit_count": "INTEGER DEFAULT 0",
+    }
+    with db.engine.begin() as conn:
+        for name, ddl in wanted.items():
+            if name not in columns:
+                conn.execute(
+                    text(f"ALTER TABLE requisitions ADD COLUMN {name} {ddl}")
+                )
+
+
 def _ensure_batch_columns() -> None:
     """Add missing batch_items columns for older databases.
 
@@ -225,6 +246,7 @@ def _ensure_batch_columns() -> None:
     from sqlalchemy import inspect, text
 
     inspector = inspect(db.engine)
+    _ensure_rejection_columns(inspector)
     if "batch_items" not in inspector.get_table_names():
         return
 
