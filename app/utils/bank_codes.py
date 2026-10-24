@@ -21,12 +21,17 @@ STANBIC_BANK_CODES = [
     ("FIRST CAPITAL", "02101", "HEAD OFFICE"),
     ("BANC ABC", "21301", "JASON MOYO"),
     ("CBZ", "06100", "HEAD OFFICE"),
+    ("ECOBANK", "26000", "HEAD OFFICE"),
+    ("FBC", "08101", "SAMORA MACHEL"),
+    ("NBS", "32100", "HEAD OFFICE"),
+    ("TN CYBER BANK", "20110", "JOINA"),
 ]
 
 # Other spellings users are likely to type
 _ALIASES = {
     "STANCHART": ["STANDARD CHARTERED"],
     "FIRST CAPITAL": ["FIRST CAPITAL BANK", "FCB"],
+    "TN CYBER BANK": ["STEWARD", "STEWARD BANK", "TN CYBER", "TN BANK"],
     "BANC ABC": ["ABC", "ABC BANK"],
 }
 
